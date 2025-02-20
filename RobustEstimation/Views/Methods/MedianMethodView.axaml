@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RobustEstimation.ViewModels.Methods"
+             x:Class="RobustEstimation.Views.Methods.MedianMethodView"
+             x:DataType="vm:MedianMethodViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+	<Grid>
+		<StackPanel Spacing="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+			<TextBlock Text="Median Estimator" FontSize="18" FontWeight="Bold"/>
+			<TextBlock Text="Description: This method computes the median of the dataset."/>
+			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+			<TextBlock Text="{Binding Result}" FontSize="16"/>
+		</StackPanel>
+	</Grid>
+</UserControl>
