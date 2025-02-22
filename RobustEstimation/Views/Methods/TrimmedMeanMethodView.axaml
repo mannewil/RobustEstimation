@@ -18,7 +18,7 @@
 
 		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="2">
 			<TextBlock Text="Trim percentage:"/>
-			<Slider Minimum="0" Maximum="0.5" Value="{Binding TrimPercentage, Mode=TwoWay}" TickFrequency="0.05" IsSnapToTickEnabled="True"/>
+			<Slider Minimum="0.05" Maximum="0.49" Value="{Binding TrimPercentage, Mode=TwoWay}" TickFrequency="0.01" IsSnapToTickEnabled="True"/>
 			<TextBlock Text="{Binding TrimPercentage, StringFormat='{}{0:P0}'}"/>
 		</StackPanel>
 
