@@ -73,13 +73,11 @@ public class MainWindowViewModel : ViewModelBase, INotifyPropertyChanged
         }
     }
 
-
-
-    private Control? _currentMethodView;
-    public Control? CurrentMethodView
+    private ViewModelBase _currentMethodViewModel;
+    public ViewModelBase CurrentMethodViewModel
     {
-        get => _currentMethodView;
-        set => SetProperty(ref _currentMethodView, value);
+        get => _currentMethodViewModel;
+        set => SetProperty(ref _currentMethodViewModel, value);
     }
 
     private Dataset _dataset;
@@ -101,9 +99,8 @@ public class MainWindowViewModel : ViewModelBase, INotifyPropertyChanged
         LoadFileCommand = new RelayCommand(async () => await LoadFileAsync());
         SaveFileCommand = new RelayCommand(async () => await SaveFileAsync());
         ComputeCommand = new RelayCommand(async () => await ComputeAsync());
-        _selectedMethod = Methods[0];
-        _selectedLanguage = Languages[0];
-        UpdateMethodView();
+        SelectedMethod = Methods[0];
+        SelectedLanguage = Languages[0];        
     }
 
     private async Task LoadFileAsync()
@@ -176,20 +173,18 @@ public class MainWindowViewModel : ViewModelBase, INotifyPropertyChanged
         }
     }
 
-
     private void UpdateMethodView()
     {
-
-        CurrentMethodView = SelectedMethod switch
+        CurrentMethodViewModel = SelectedMethod switch
         {
-            "Median" => new MedianMethodView { DataContext = new MedianMethodViewModel(Dataset, this) },
-            "Huber" => new HuberMethodView(),
-            "Trimmed Mean" => new TrimmedMeanMethodView { DataContext = new TrimmedMeanMethodViewModel(Dataset, this) },
-            "Theil-Sen" => new TheilSenMethodView(),
-            "LMS" => new LMSMethodView(),
+            "Median" => new MedianMethodViewModel(Dataset, this),
+            //"Huber" => new HuberMethodView(),
+            "Trimmed Mean" => new TrimmedMeanMethodViewModel(Dataset, this),
+            //"Theil-Sen" => new TheilSenMethodView(),
+            //"LMS" => new LMSMethodView(),
             _ => null
         };
-
+        OnPropertyChanged(nameof(CurrentMethodViewModel));
     }
 
     private void UpdateDataset()

@@ -23,10 +23,8 @@
 		<!-- Контейнер для метода -->
 		<Border Grid.Row="1" MinHeight="200" Margin="10" BorderThickness="1" BorderBrush="Gray">
 			<ScrollViewer VerticalScrollBarVisibility="Auto">
-				<ContentControl Content="{Binding CurrentMethodView}"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                MinHeight="200"/>
+				<ContentControl Content="{Binding CurrentMethodViewModel}">
+				</ContentControl>
 			</ScrollViewer>
 		</Border>
 
