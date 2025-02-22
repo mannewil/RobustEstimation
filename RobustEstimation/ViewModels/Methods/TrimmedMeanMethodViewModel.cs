@@ -43,7 +43,7 @@ namespace RobustEstimation.ViewModels.Methods
             Progress = 0;
             _mainViewModel.Progress = 0;
 
-            var progress = new Progress<double>(p =>
+            var progress = new Progress<int>(p =>
             {
                 Progress = p;
                 _mainViewModel.Progress = p;
@@ -51,25 +51,10 @@ namespace RobustEstimation.ViewModels.Methods
 
             try
             {
-                var values = _dataset.Values.OrderBy(x => x).ToArray();
-                int count = values.Length;
-                if (count == 0)
-                    throw new InvalidOperationException("No data available");
+                var estimator = new TrimmedMeanEstimator(TrimPercentage);
+                double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
-                double trimmedMean = await Task.Run(() =>
-                {
-                    int trimCount = (int)(count * TrimPercentage);
-                    var trimmedValues = values.Skip(trimCount).Take(count - 2 * trimCount).ToArray();
-
-                    double result = trimmedValues.Average();
-                    for (int i = 0; i < count; i++)
-                    {
-                        ((IProgress<double>)progress).Report(((i + 1) / (double)count) * 100);
-                    }
-                    return result;
-                }, _cts.Token);
-
-                await Dispatcher.UIThread.InvokeAsync(() => Result = $"Result: {trimmedMean:F2}");
+                await Dispatcher.UIThread.InvokeAsync(() => Result = $"Result: {result:F2}");
             }
             catch (OperationCanceledException)
             {

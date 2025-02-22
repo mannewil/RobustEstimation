@@ -145,6 +145,7 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentMethodViewModel = SelectedMethod switch
         {
             "Median" => new MedianMethodViewModel(Dataset, this),
+            "Huber" => new HuberMethodViewModel(Dataset, this),
             "Trimmed Mean" => new TrimmedMeanMethodViewModel(Dataset, this),
             _ => null
         };
