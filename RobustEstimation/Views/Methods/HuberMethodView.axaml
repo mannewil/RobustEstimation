@@ -18,11 +18,15 @@
 
 		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="2">
 			<TextBlock Text="Tuning constant (c):"/>
-			<Slider Minimum="1.0" Maximum="5.0" Value="{Binding TuningConstant, Mode=TwoWay}" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
-			<TextBlock Text="{Binding TuningConstant, StringFormat='{}{0:F1}'}"/>
+			<Slider Minimum="1.0" Maximum="5.0" Value="{Binding TuningConstant, Mode=TwoWay}" TickFrequency="0.005" IsSnapToTickEnabled="True"/>
+			<TextBlock Text="{Binding TuningConstant, StringFormat='{}{0:F3}'}"/>
 		</StackPanel>
-
-		<Button Content="Compute" Command="{Binding ComputeCommand}" Grid.Row="3"/>
-		<TextBlock Text="{Binding Result}" FontSize="16" Grid.Row="4"/>
+	
+		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
+			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+			<TextBlock Text="{Binding Result}" FontSize="16"/>
+			<TextBlock Text="{Binding ProcessedDataset}" FontSize="12"/>
+		</StackPanel>
+		
 	</Grid>
 </UserControl>

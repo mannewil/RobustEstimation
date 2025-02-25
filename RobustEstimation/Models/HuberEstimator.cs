@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace RobustEstimation.Models
 {
-    // Оценка Хьюбера (ограничивает влияние выбросов)
     public class HuberEstimator : RobustEstimatorBase
     {
         private readonly double threshold;
+        public List<double> ProcessedValues { get; private set; } = new();
 
         public HuberEstimator(double threshold = 1.5)
         {
@@ -21,7 +20,8 @@ namespace RobustEstimation.Models
         {
             return await Task.Run(() =>
             {
-                double mean = data.Values.Average();
+                double median = MedianEstimator.ComputeMedian(data.Values); // ✅ Используем готовый метод
+                ProcessedValues.Clear();
                 double sum = 0;
                 int count = data.Values.Count;
                 int processed = 0;
@@ -29,13 +29,17 @@ namespace RobustEstimation.Models
                 foreach (var x in data.Values)
                 {
                     if (cancellationToken.IsCancellationRequested) throw new OperationCanceledException();
-                    sum += Math.Abs(x - mean) <= threshold ? x : threshold * Math.Sign(x - mean);
+
+                    double adjustedValue = Math.Abs(x - median) <= threshold ? x : median + threshold * Math.Sign(x - median);
+                    sum += adjustedValue;
+                    ProcessedValues.Add(adjustedValue);
+
                     processed++;
                     progress?.Report((processed * 100) / count);
                 }
+
                 return sum / count;
             }, cancellationToken);
         }
     }
-
 }

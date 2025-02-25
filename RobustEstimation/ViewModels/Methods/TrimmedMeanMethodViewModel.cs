@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +17,9 @@ namespace RobustEstimation.ViewModels.Methods
 
         [ObservableProperty]
         private string result = "Not computed";
+
+        [ObservableProperty]
+        private string processedDataset = "";
 
         [ObservableProperty]
         private double progress;
@@ -40,6 +42,7 @@ namespace RobustEstimation.ViewModels.Methods
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
             Result = "Calculating...";
+            ProcessedDataset = "";
             Progress = 0;
             _mainViewModel.Progress = 0;
 
@@ -54,7 +57,14 @@ namespace RobustEstimation.ViewModels.Methods
                 var estimator = new TrimmedMeanEstimator(TrimPercentage);
                 double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
-                await Dispatcher.UIThread.InvokeAsync(() => Result = $"Result: {result:F2}");
+                // Форматируем обработанный датасет для вывода
+                string processedData = $"[{string.Join(", ", estimator.ProcessedData.Take(5))}...]";
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Result = $"Result: {result:F2}";
+                    ProcessedDataset = $"Processed dataset: {processedData}";
+                });
             }
             catch (OperationCanceledException)
             {

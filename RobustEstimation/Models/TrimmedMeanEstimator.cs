@@ -9,6 +9,7 @@ namespace RobustEstimation.Models
     public class TrimmedMeanEstimator : RobustEstimatorBase
     {
         private double _trimPercentage;
+        public List<double> ProcessedData { get; private set; } = new();
 
         public double TrimPercentage
         {
@@ -34,10 +35,10 @@ namespace RobustEstimation.Models
                 sortedValues.Sort();
 
                 int trimCount = (int)(sortedValues.Count * TrimPercentage);
-                var trimmedValues = sortedValues.Skip(trimCount).Take(sortedValues.Count - 2 * trimCount).ToList();
+                ProcessedData = sortedValues.Skip(trimCount).Take(sortedValues.Count - 2 * trimCount).ToList();
 
                 progress?.Report(100);
-                return trimmedValues.Average();
+                return ProcessedData.Average();
             }, cancellationToken);
         }
     }

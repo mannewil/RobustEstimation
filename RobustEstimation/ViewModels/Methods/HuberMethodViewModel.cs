@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -19,10 +19,13 @@ public partial class HuberMethodViewModel : ViewModelBase
     private double progress;
 
     [ObservableProperty]
-    private double tuningConstant = 1.5; // Значение по умолчанию
+    private double tuningConstant = 1.345;
 
     [ObservableProperty]
     private string result = "Not computed";
+
+    [ObservableProperty]
+    private string processedDataset = "";
 
     public IRelayCommand ComputeCommand { get; }
 
@@ -40,6 +43,7 @@ public partial class HuberMethodViewModel : ViewModelBase
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         Result = "Calculating...";
+        ProcessedDataset = "";
         Progress = 0;
         _mainViewModel.Progress = 0;
 
@@ -52,7 +56,6 @@ public partial class HuberMethodViewModel : ViewModelBase
         try
         {
             var estimator = new HuberEstimator(TuningConstant);
-
             double result = await Task.Run(async () =>
             {
                 double estimation = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
@@ -64,7 +67,11 @@ public partial class HuberMethodViewModel : ViewModelBase
                 return estimation;
             }, _cts.Token);
 
-            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Result: {result:F2}");
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Result = $"Result: {result:F2}";
+                ProcessedDataset = $"Processed dataset: [{string.Join(", ", estimator.ProcessedValues.Take(20))}...]"; // Показываем только 10 значений
+            });
         }
         catch (OperationCanceledException)
         {
@@ -75,5 +82,4 @@ public partial class HuberMethodViewModel : ViewModelBase
             await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
         }
     }
-
 }
