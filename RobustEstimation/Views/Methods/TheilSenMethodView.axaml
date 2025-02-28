@@ -1,8 +1,25 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="RobustEstimation.Views.Methods.TheilSenMethodView">
-  Welcome to Avalonia!
+             xmlns:vm="using:RobustEstimation.ViewModels.Methods"
+             x:Class="RobustEstimation.Views.Methods.TheilSenMethodView"
+             x:DataType="vm:TheilSenMethodViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<TextBlock Text="Theil-Sen Estimator" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
+		<TextBlock Text="Description: This method computes the Theil-Sen estimator, which is a robust method for estimating the slope of a regression line." Grid.Row="1"/>		
+
+		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
+			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+			<TextBlock Text="{Binding Result}" FontSize="16"/>
+			<TextBlock Text="{Binding ProcessedSlopes}" FontSize="12"/>
+		</StackPanel>
+	</Grid>
 </UserControl>

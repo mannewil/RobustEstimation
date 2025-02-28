@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +8,8 @@ namespace RobustEstimation.Models
 {
     public class TheilSenEstimator : RobustEstimatorBase
     {
+        public List<double> ProcessedSlopes { get; private set; } = new();
+
         public override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
@@ -28,6 +29,7 @@ namespace RobustEstimation.Models
                     }
                 }
                 slopes.Sort();
+                ProcessedSlopes = slopes; // Сохраняем наклоны
                 return slopes[slopes.Count / 2];
             }, cancellationToken);
         }

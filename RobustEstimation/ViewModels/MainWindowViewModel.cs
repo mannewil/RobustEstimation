@@ -147,6 +147,7 @@ public partial class MainWindowViewModel : ViewModelBase
             "Median" => new MedianMethodViewModel(Dataset, this),
             "Huber" => new HuberMethodViewModel(Dataset, this),
             "Trimmed Mean" => new TrimmedMeanMethodViewModel(Dataset, this),
+            "Theil-Sen" => new TheilSenMethodViewModel(Dataset, this),
             _ => null
         };
     }
