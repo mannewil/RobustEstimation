@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +8,8 @@ namespace RobustEstimation.Models
 {
     public class LMSEstimator : RobustEstimatorBase
     {
+        public List<double> ProcessedErrors { get; private set; } = new();
+
         public override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
@@ -20,14 +21,19 @@ namespace RobustEstimation.Models
                 foreach (var value in data.Values)
                 {
                     if (cancellationToken.IsCancellationRequested) throw new OperationCanceledException();
-                    squaredErrors.Add(Math.Pow(value - median, 2));
+                    double error = Math.Pow(value - median, 2);
+                    squaredErrors.Add(error);
                     processed++;
                     progress?.Report((processed * 100) / count);
                 }
                 squaredErrors.Sort();
-                return squaredErrors[squaredErrors.Count / 2];
+                ProcessedErrors = squaredErrors;
+                int mid = squaredErrors.Count / 2;
+                if (squaredErrors.Count % 2 == 0)
+                    return (squaredErrors[mid - 1] + squaredErrors[mid]) / 2.0;
+                else
+                    return squaredErrors[mid];
             }, cancellationToken);
         }
     }
-
 }

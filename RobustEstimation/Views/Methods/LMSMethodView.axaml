@@ -1,8 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="RobustEstimation.Views.Methods.LMSMethodView">
-  Welcome to Avalonia!
+             xmlns:vm="using:RobustEstimation.ViewModels.Methods"
+             x:Class="RobustEstimation.Views.Methods.LMSMethodView"
+             x:DataType="vm:LMSMethodViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<TextBlock Text="LMS Estimator" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
+		<TextBlock Text="Description: Least Median of Squares (LMS) is a robust regression estimator that minimizes the median of squared residuals." Grid.Row="1"/>
+
+		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="2">
+			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+		</StackPanel>
+
+		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
+			<TextBlock Text="{Binding Result}" FontSize="16"/>
+			<TextBlock Text="{Binding ProcessedErrors}" FontSize="12"/>
+		</StackPanel>
+
+	</Grid>
 </UserControl>
