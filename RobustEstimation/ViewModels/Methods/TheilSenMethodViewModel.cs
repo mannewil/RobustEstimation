@@ -54,7 +54,7 @@ namespace RobustEstimation.ViewModels.Methods
                 var estimator = new TheilSenEstimator();
                 double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
                 
-                string processedData = $"[{string.Join(", ", estimator.ProcessedSlopes.Take(20))}...]";
+                string processedData = $"[{string.Join(", ", estimator.ProcessedSlopes.Take(100))}]";
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {

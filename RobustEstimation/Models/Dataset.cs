@@ -1,33 +1,50 @@
-﻿using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RobustEstimation.Models
 {
-    public class Dataset : INotifyPropertyChanged
+    public partial class Dataset : ObservableObject
     {
-        private ObservableCollection<double> _values = new();
+        /// <summary>
+        /// Original values loaded into the dataset. These do not change after the initial load.
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<double> originalValues = new();
 
-        public ObservableCollection<double> Values
-        {
-            get => _values;
-            private set
-            {
-                _values = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Values)));
-            }
-        }
+        /// <summary>
+        /// Current values in the dataset, which may be modified by calculations.
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<double> values = new();
 
+        /// <summary>
+        /// Sets the dataset values. If original values are empty, they are initialized.
+        /// </summary>
         public void SetValues(IEnumerable<double> newValues)
         {
-            _values.Clear();
-            foreach (var value in newValues)
+            var valuesList = newValues.ToList();
+
+            if (originalValues.Count == 0) // Store original values only once
             {
-                _values.Add(value);
+                OriginalValues = new ObservableCollection<double>(valuesList);
             }
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Values)));
+
+            Values = new ObservableCollection<double>(valuesList);
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        /// <summary>
+        /// Restores the dataset to its original values.
+        /// </summary>
+        public void ResetToOriginal()
+        {
+            Values = new ObservableCollection<double>(OriginalValues);
+        }
+
+        /// <summary>
+        /// Checks if the dataset has been modified.
+        /// </summary>
+        public bool IsModified() => !Values.SequenceEqual(OriginalValues.ToList());      
     }
 }

@@ -55,7 +55,7 @@ namespace RobustEstimation.ViewModels.Methods
                 var estimator = new LMSEstimator();
                 double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
-                string processedData = $"[{string.Join(", ", estimator.ProcessedErrors.Take(20))}...]";
+                string processedData = $"[{string.Join(", ", estimator.ProcessedErrors.Take(100))}]";
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {

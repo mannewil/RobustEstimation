@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -79,16 +80,72 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task SaveFileAsync()
     {
-        if (Dataset == null || Dataset.Values.Count == 0) return;
+        if (Dataset == null || Dataset.Values.Count == 0)
+            return;
 
         var dialog = new SaveFileDialog();
+        dialog.DefaultExtension = ".txt";
+        dialog.InitialFileName = $"{selectedMethod}_out.txt";
+        dialog.Filters.Add(new FileDialogFilter { Name = "Text files", Extensions = { "txt" } });
         var result = await dialog.ShowAsync(new Window());
 
-        if (!string.IsNullOrEmpty(result))
+        if (string.IsNullOrEmpty(result))
+            return;
+
+        string methodParameter = "";
+        string methodProcessedDataset = "";
+        double computedResult = double.NaN;
+        
+        if (CurrentMethodViewModel is TrimmedMeanMethodViewModel trimmedMeanVM)
         {
-            await FileManager.SaveToFileAsync(Dataset, result);
+            methodParameter = $"Trim Fraction: {trimmedMeanVM.TrimPercentage * 100:F0}%";
+            methodProcessedDataset = string.Join(", ", trimmedMeanVM.ProcessedDataset);
+            computedResult = ParseResult(trimmedMeanVM.Result);
         }
+        else if (CurrentMethodViewModel is HuberMethodViewModel huberVM)
+        {
+            methodParameter = $"Delta: {huberVM.TuningConstant}";
+            methodProcessedDataset = string.Join(", ", huberVM.ProcessedDataset);
+            computedResult = ParseResult(huberVM.Result);
+        }
+        else if (CurrentMethodViewModel is LMSMethodViewModel lmsVM)
+        {
+            methodParameter = "LMS Estimator (default settings)";
+            methodProcessedDataset = string.Join(", ", lmsVM.ProcessedErrors);
+            computedResult = ParseResult(lmsVM.Result);
+        }
+        else if (CurrentMethodViewModel is TheilSenMethodViewModel theilSenVM)
+        {
+            methodParameter = "Theil-Sen Estimator";
+            methodProcessedDataset = string.Join(", ", theilSenVM.ProcessedSlopes);
+            computedResult = ParseResult(theilSenVM.Result);
+        }
+        else if (CurrentMethodViewModel is MedianMethodViewModel medianVM)
+        {
+            methodParameter = "Median Estimator";
+            computedResult = ParseResult(medianVM.Result);
+        }
+
+        // Вызываем FileManager с нужными параметрами
+        await FileManager.SaveToFileAsync(Dataset, result, SelectedMethod, methodParameter, methodProcessedDataset, computedResult);
     }
+
+    // Метод для безопасного извлечения результата
+    private double ParseResult(string resultText)
+    {
+        if (string.IsNullOrEmpty(resultText))
+            return double.NaN;
+
+        if (resultText.StartsWith("Result:"))
+            resultText = resultText.Replace("Result:", "").Trim();
+
+        // Исправляем локальную запятую на точку (если она есть)
+        resultText = resultText.Replace(',', '.');
+
+        return double.TryParse(resultText, NumberStyles.Any, CultureInfo.InvariantCulture, out var res) ? res : double.NaN;
+    }
+
+
 
     private async Task ComputeAsync()
     {

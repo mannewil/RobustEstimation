@@ -58,7 +58,7 @@ namespace RobustEstimation.ViewModels.Methods
                 double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
                 // Форматируем обработанный датасет для вывода
-                string processedData = $"[{string.Join(", ", estimator.ProcessedData.Take(20))}...]";
+                string processedData = $"[{string.Join(", ", estimator.ProcessedData.Take(100))}]";
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {

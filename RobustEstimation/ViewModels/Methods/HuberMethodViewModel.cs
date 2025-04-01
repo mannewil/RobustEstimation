@@ -62,7 +62,7 @@ public partial class HuberMethodViewModel : ViewModelBase
                 for (int i = 0; i <= 100; i++)
                 {
                     ((IProgress<int>)progress).Report(i);
-                    await Task.Delay(3, _cts.Token);
+                    await Task.Delay(1, _cts.Token);
                 }
                 return estimation;
             }, _cts.Token);
@@ -70,7 +70,7 @@ public partial class HuberMethodViewModel : ViewModelBase
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 Result = $"Result: {result:F2}";
-                ProcessedDataset = $"Processed dataset: [{string.Join(", ", estimator.ProcessedValues.Take(20).Select(x => x.ToString("F3")))}...]";
+                ProcessedDataset = $"Processed dataset: [{string.Join(", ", estimator.ProcessedValues.Take(100).Select(x => x.ToString("F3")))}]";
             });
         }
         catch (OperationCanceledException)
