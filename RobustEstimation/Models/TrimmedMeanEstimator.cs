@@ -10,6 +10,7 @@ namespace RobustEstimation.Models
     {
         private double _trimPercentage;
         public List<double> ProcessedData { get; private set; } = new();
+        public double[,] CovarianceMatrix { get; private set; }
 
         public double TrimPercentage
         {
@@ -31,15 +32,38 @@ namespace RobustEstimation.Models
         {
             return await Task.Run(() =>
             {
+                if (data.Values == null || data.Values.Count == 0)
+                    throw new ArgumentException("Dataset cannot be empty.");
+
                 var sortedValues = data.Values.ToList();
                 sortedValues.Sort();
 
-                int trimCount = (int)(sortedValues.Count * TrimPercentage);
+                int trimCount = (int)Math.Round(sortedValues.Count * TrimPercentage); // Округляем правильно
                 ProcessedData = sortedValues.Skip(trimCount).Take(sortedValues.Count - 2 * trimCount).ToList();
 
+                double trimmedMean = ProcessedData.Average();
+                Console.WriteLine($"Trimmed Mean: {trimmedMean}");
+
+                ComputeCovarianceMatrix(ProcessedData, trimmedMean);
                 progress?.Report(100);
-                return ProcessedData.Average();
+                return trimmedMean;
             }, cancellationToken);
+        }
+
+        private void ComputeCovarianceMatrix(List<double> data, double trimmedMean)
+        {
+            double varianceSum = 0;
+            int count = data.Count;
+
+            foreach (var value in data)
+            {
+                double deviation = value - trimmedMean;
+                varianceSum += deviation * deviation;
+            }
+
+            double variance = count > 1 ? varianceSum / (count - 1) : 0; // Несмещённая оценка дисперсии
+            CovarianceMatrix = new double[,] { { variance } };
+            Console.WriteLine($"Covariance Matrix: {variance}");
         }
     }
 }

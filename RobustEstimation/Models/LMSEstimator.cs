@@ -9,11 +9,15 @@ namespace RobustEstimation.Models
     public class LMSEstimator : RobustEstimatorBase
     {
         public List<double> ProcessedErrors { get; private set; } = new();
+        public double[,] CovarianceMatrix { get; private set; }
 
         public override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
             {
+                if (data.Values == null || data.Values.Count == 0)
+                    throw new ArgumentException("Dataset cannot be empty.");
+
                 var squaredErrors = new List<double>();
                 double median = new MedianEstimator().ComputeAsync(data, progress, cancellationToken).Result;
                 int processed = 0, count = data.Values.Count;
@@ -26,14 +30,45 @@ namespace RobustEstimation.Models
                     processed++;
                     progress?.Report((processed * 100) / count);
                 }
+
                 squaredErrors.Sort();
                 ProcessedErrors = squaredErrors;
+
+                // Вычисляем LMS (медиану квадратов ошибок)
                 int mid = squaredErrors.Count / 2;
-                if (squaredErrors.Count % 2 == 0)
-                    return (squaredErrors[mid - 1] + squaredErrors[mid]) / 2.0;
-                else
-                    return squaredErrors[mid];
+                double lms = squaredErrors.Count % 2 == 0
+                    ? (squaredErrors[mid - 1] + squaredErrors[mid]) / 2.0
+                    : squaredErrors[mid];
+
+                // Вычисляем ковариационную матрицу
+                ComputeCovarianceMatrix(ProcessedErrors, lms);
+
+                return lms;
             }, cancellationToken);
         }
+
+        private void ComputeCovarianceMatrix(List<double> data, double lms)
+        {
+            if (data.Count < 2)
+            {
+                CovarianceMatrix = new double[,] { { 0 } };
+                return;
+            }
+
+            double mean = data.Average(); // Среднее квадратичных ошибок
+            double varianceSum = 0;
+            int count = data.Count;
+
+            foreach (var value in data)
+            {
+                double deviation = value - mean;  // Отклонение от среднего
+                varianceSum += deviation * deviation;
+            }
+
+            double variance = varianceSum / (count - 1);  // Несмещённая дисперсия
+            CovarianceMatrix = new double[,] { { variance } };
+            Console.WriteLine($"Covariance matrix: {variance:F4}");  // Число в нормальном формате
+        }
+
     }
 }

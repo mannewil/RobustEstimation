@@ -22,10 +22,13 @@ namespace RobustEstimation.ViewModels.Methods
         private string processedDataset = "";
 
         [ObservableProperty]
+        private string covarianceMatrix = "";
+
+        [ObservableProperty]
         private double progress;
 
         [ObservableProperty]
-        private double trimPercentage = 0.1; // По умолчанию 10%
+        private double trimPercentage = 0.1;
 
         public TrimmedMeanMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
         {
@@ -43,6 +46,7 @@ namespace RobustEstimation.ViewModels.Methods
             _cts = new CancellationTokenSource();
             Result = "Calculating...";
             ProcessedDataset = "";
+            CovarianceMatrix = "";
             Progress = 0;
             _mainViewModel.Progress = 0;
 
@@ -57,13 +61,17 @@ namespace RobustEstimation.ViewModels.Methods
                 var estimator = new TrimmedMeanEstimator(TrimPercentage);
                 double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
-                // Форматируем обработанный датасет для вывода
                 string processedData = $"[{string.Join(", ", estimator.ProcessedData.Take(100))}]";
+
+                string covarianceMatrixFormatted = estimator.CovarianceMatrix != null
+                    ? $"{estimator.CovarianceMatrix[0, 0]:F4}"
+                    : "Error calculating covariance";
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     Result = $"Result: {result:F2}";
                     ProcessedDataset = $"Processed dataset: {processedData}";
+                    CovarianceMatrix = $"Covariance matrix: {covarianceMatrixFormatted}";
                 });
             }
             catch (OperationCanceledException)

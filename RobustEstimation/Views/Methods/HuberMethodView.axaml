@@ -26,6 +26,7 @@
 			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 			<TextBlock Text="{Binding ProcessedDataset}" FontSize="12"/>
+			<TextBlock Text="{Binding CovarianceMatrix}" FontSize="12"/>
 		</StackPanel>
 		
 	</Grid>

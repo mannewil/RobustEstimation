@@ -23,6 +23,7 @@
 		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 			<TextBlock Text="{Binding ProcessedErrors}" FontSize="12"/>
+			<TextBlock Text="{Binding CovarianceMatrix}" FontSize="12"/>
 		</StackPanel>
 
 	</Grid>

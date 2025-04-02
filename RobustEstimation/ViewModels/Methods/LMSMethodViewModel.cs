@@ -23,6 +23,9 @@ namespace RobustEstimation.ViewModels.Methods
         private string processedErrors = "";
 
         [ObservableProperty]
+        private string covarianceMatrix = "";
+
+        [ObservableProperty]
         private double progress;
 
         public LMSMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
@@ -41,6 +44,7 @@ namespace RobustEstimation.ViewModels.Methods
             _cts = new CancellationTokenSource();
             Result = "Calculating...";
             ProcessedErrors = "";
+            CovarianceMatrix = "";
             Progress = 0;
             _mainViewModel.Progress = 0;
 
@@ -56,11 +60,15 @@ namespace RobustEstimation.ViewModels.Methods
                 double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
                 string processedData = $"[{string.Join(", ", estimator.ProcessedErrors.Take(100))}]";
+                string covarianceData = estimator.CovarianceMatrix != null
+                    ? $"[{estimator.CovarianceMatrix[0, 0]:F4}]"
+                    : "[N/A]";
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     Result = $"Result: {result:F2}";
                     ProcessedErrors = $"Computed squared errors: {processedData}";
+                    CovarianceMatrix = $"Covariance matrix: {covarianceData}";
                 });
             }
             catch (OperationCanceledException)

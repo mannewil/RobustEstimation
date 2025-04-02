@@ -101,18 +101,25 @@ public partial class MainWindowViewModel : ViewModelBase
             methodParameter = $"Trim Fraction: {trimmedMeanVM.TrimPercentage * 100:F0}%";
             methodProcessedDataset = string.Join(", ", trimmedMeanVM.ProcessedDataset);
             computedResult = ParseResult(trimmedMeanVM.Result);
+            string covarianceMatrixText = $"{trimmedMeanVM.CovarianceMatrix}";
+            methodProcessedDataset += $"\n\n{covarianceMatrixText}";
         }
         else if (CurrentMethodViewModel is HuberMethodViewModel huberVM)
         {
             methodParameter = $"Delta: {huberVM.TuningConstant}";
             methodProcessedDataset = string.Join(", ", huberVM.ProcessedDataset);
             computedResult = ParseResult(huberVM.Result);
+            string covarianceMatrixText = $"{huberVM.CovarianceMatrix}";
+            methodProcessedDataset += $"\n\n{covarianceMatrixText}";
         }
+
         else if (CurrentMethodViewModel is LMSMethodViewModel lmsVM)
         {
             methodParameter = "LMS Estimator (default settings)";
             methodProcessedDataset = string.Join(", ", lmsVM.ProcessedErrors);
             computedResult = ParseResult(lmsVM.Result);
+            string covarianceMatrixText = $"{lmsVM.CovarianceMatrix}";
+            methodProcessedDataset += $"\n\n{covarianceMatrixText}";
         }
         else if (CurrentMethodViewModel is TheilSenMethodViewModel theilSenVM)
         {

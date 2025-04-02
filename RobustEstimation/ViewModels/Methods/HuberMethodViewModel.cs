@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +28,9 @@ public partial class HuberMethodViewModel : ViewModelBase
     [ObservableProperty]
     private string processedDataset = "";
 
+    [ObservableProperty]
+    private string covarianceMatrix = "";
+
     public IRelayCommand ComputeCommand { get; }
 
     public HuberMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
@@ -44,6 +48,7 @@ public partial class HuberMethodViewModel : ViewModelBase
         _cts = new CancellationTokenSource();
         Result = "Calculating...";
         ProcessedDataset = "";
+        CovarianceMatrix = "";
         Progress = 0;
         _mainViewModel.Progress = 0;
 
@@ -71,6 +76,8 @@ public partial class HuberMethodViewModel : ViewModelBase
             {
                 Result = $"Result: {result:F2}";
                 ProcessedDataset = $"Processed dataset: [{string.Join(", ", estimator.ProcessedValues.Take(100).Select(x => x.ToString("F3")))}]";
+                CovarianceMatrix = $"Covariance matrix: {estimator.CovarianceMatrix[0, 0].ToString("F4", CultureInfo.InvariantCulture)}";
+
             });
         }
         catch (OperationCanceledException)
