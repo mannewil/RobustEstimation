@@ -16,11 +16,11 @@ public partial class GraphWindowViewModel : ViewModelBase
         var model = new PlotModel
         {
             Title = graphable.GetGraphTitle(),
-            TextColor = OxyColors.Black,
-            PlotAreaBorderColor = OxyColors.Black,
+            TextColor = OxyColors.White,
+            PlotAreaBorderColor = OxyColors.White,
             //LegendTextColor = OxyColors.White,
-            TitleColor = OxyColors.Black,
-            Background = OxyColors.White,
+            TitleColor = OxyColors.White,
+            Background = OxyColors.Black,
         };
 
         foreach (var series in graphable.GetSeries())
