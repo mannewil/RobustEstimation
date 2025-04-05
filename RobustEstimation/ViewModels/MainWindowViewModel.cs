@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Avalonia.Controls;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RobustEstimation.Models;
 using RobustEstimation.ViewModels.Methods;
-using RobustEstimation.Views.Methods;
 
 namespace RobustEstimation.ViewModels;
 
@@ -50,110 +46,54 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private Dataset dataset;
 
-    public ICommand LoadFileCommand { get; }
-    public ICommand SaveFileCommand { get; }
-    public ICommand ComputeCommand { get; }
-
+    private readonly IWindowService _windowService;
     private CancellationTokenSource _cts;
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(IWindowService windowService)
     {
         Dataset = new Dataset();
-        LoadFileCommand = new RelayCommand(async () => await LoadFileAsync());
-        SaveFileCommand = new RelayCommand(async () => await SaveFileAsync());
-        ComputeCommand = new RelayCommand(async () => await ComputeAsync());
+        _windowService = windowService;
         SelectedMethod = Methods[0];
         SelectedLanguage = Languages[0];
     }
 
+    [RelayCommand]
     private async Task LoadFileAsync()
     {
         var dialog = new OpenFileDialog();
         var result = await dialog.ShowAsync(new Window());
 
-        if (result != null && result.Length > 0)
+        if (result?.Length > 0)
         {
             var loadedDataset = await FileManager.LoadFromFileAsync(result[0]);
             InputNumbers = string.Join(", ", loadedDataset.Values);
         }
     }
 
+    [RelayCommand]
     private async Task SaveFileAsync()
     {
         if (Dataset == null || Dataset.Values.Count == 0)
             return;
 
-        var dialog = new SaveFileDialog();
-        dialog.DefaultExtension = ".txt";
-        dialog.InitialFileName = $"{selectedMethod}_out.txt";
-        dialog.Filters.Add(new FileDialogFilter { Name = "Text files", Extensions = { "txt" } });
-        var result = await dialog.ShowAsync(new Window());
+        var dialog = new SaveFileDialog
+        {
+            DefaultExtension = ".txt",
+            InitialFileName = $"{SelectedMethod}_out.txt",
+            Filters = { new FileDialogFilter { Name = "Text files", Extensions = { "txt" } } }
+        };
 
+        var result = await dialog.ShowAsync(new Window());
         if (string.IsNullOrEmpty(result))
             return;
 
-        string methodParameter = "";
-        string methodProcessedDataset = "";
-        double computedResult = double.NaN;
-        
-        if (CurrentMethodViewModel is TrimmedMeanMethodViewModel trimmedMeanVM)
-        {
-            methodParameter = $"Trim Fraction: {trimmedMeanVM.TrimPercentage * 100:F0}%";
-            methodProcessedDataset = string.Join(", ", trimmedMeanVM.ProcessedDataset);
-            computedResult = ParseResult(trimmedMeanVM.Result);
-            string covarianceMatrixText = $"{trimmedMeanVM.CovarianceMatrix}";
-            methodProcessedDataset += $"\n\n{covarianceMatrixText}";
-        }
-        else if (CurrentMethodViewModel is HuberMethodViewModel huberVM)
-        {
-            methodParameter = $"Delta: {huberVM.TuningConstant}";
-            methodProcessedDataset = string.Join(", ", huberVM.ProcessedDataset);
-            computedResult = ParseResult(huberVM.Result);
-            string covarianceMatrixText = $"{huberVM.CovarianceMatrix}";
-            methodProcessedDataset += $"\n\n{covarianceMatrixText}";
-        }
+        var (methodParameter, methodProcessedDataset, computedResult, covarianceMatrixText) = GetMethodDetails();
+        methodProcessedDataset += $"\n\n{covarianceMatrixText}";
 
-        else if (CurrentMethodViewModel is LMSMethodViewModel lmsVM)
-        {
-            methodParameter = "LMS Estimator (default settings)";
-            methodProcessedDataset = string.Join(", ", lmsVM.ProcessedErrors);
-            computedResult = ParseResult(lmsVM.Result);
-            string covarianceMatrixText = $"{lmsVM.CovarianceMatrix}";
-            methodProcessedDataset += $"\n\n{covarianceMatrixText}";
-        }
-        else if (CurrentMethodViewModel is TheilSenMethodViewModel theilSenVM)
-        {
-            methodParameter = "Theil-Sen Estimator";
-            methodProcessedDataset = string.Join(", ", theilSenVM.ProcessedSlopes);
-            computedResult = ParseResult(theilSenVM.Result);
-        }
-        else if (CurrentMethodViewModel is MedianMethodViewModel medianVM)
-        {
-            methodParameter = "Median Estimator";
-            computedResult = ParseResult(medianVM.Result);
-        }
-
-        // Вызываем FileManager с нужными параметрами
         await FileManager.SaveToFileAsync(Dataset, result, SelectedMethod, methodParameter, methodProcessedDataset, computedResult);
     }
 
-    // Метод для безопасного извлечения результата
-    private double ParseResult(string resultText)
-    {
-        if (string.IsNullOrEmpty(resultText))
-            return double.NaN;
-
-        if (resultText.StartsWith("Result:"))
-            resultText = resultText.Replace("Result:", "").Trim();
-
-        // Исправляем локальную запятую на точку (если она есть)
-        resultText = resultText.Replace(',', '.');
-
-        return double.TryParse(resultText, NumberStyles.Any, CultureInfo.InvariantCulture, out var res) ? res : double.NaN;
-    }
-
-
-
+    [RelayCommand]
     private async Task ComputeAsync()
     {
         if (Dataset == null || Dataset.Values.Count == 0)
@@ -184,14 +124,32 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             try
             {
-                double result = await estimator.ComputeAsync(Dataset, progress, _cts.Token);
-                Result = $"Result: {result:F2}";
+                double computedResult = await estimator.ComputeAsync(Dataset, progress, _cts.Token);
+                Result = $"Result: {computedResult:F2}";
             }
             catch (OperationCanceledException)
             {
                 Result = "Calculation canceled.";
             }
         }
+    }
+
+    [RelayCommand]
+    private void ShowGraph()
+    {
+        if (_windowService == null)
+        {
+            Result = "_windowService is null!";
+            return;
+        }
+
+        if (CurrentMethodViewModel == null)
+        {
+            Result = "CurrentMethodViewModel is null!";
+            return;
+        }
+
+        _windowService.ShowGraphWindow(CurrentMethodViewModel);
     }
 
     partial void OnSelectedMethodChanged(string value)
@@ -223,11 +181,61 @@ public partial class MainWindowViewModel : ViewModelBase
             Dataset = new Dataset();
 
         var values = InputNumbers?.Split(new[] { ' ', ',', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Select(s => double.TryParse(s, out var num) ? num : (double?)null)
+                                 .Select(s => double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var num) ? num : (double?)null)
                                  .Where(n => n.HasValue)
                                  .Select(n => n.Value)
                                  .ToList() ?? new List<double>();
 
         Dataset.SetValues(values);
+    }
+
+    private (string methodParameter, string methodProcessedDataset, double computedResult, string covarianceMatrixText) GetMethodDetails()
+    {
+        string methodParameter = "", methodProcessedDataset = "", covarianceMatrixText = "";
+        double computedResult = double.NaN;
+
+        switch (CurrentMethodViewModel)
+        {
+            case TrimmedMeanMethodViewModel trimmedMeanVM:
+                methodParameter = $"Trim Fraction: {trimmedMeanVM.TrimPercentage * 100:F0}%";
+                methodProcessedDataset = string.Join(", ", trimmedMeanVM.ProcessedDataset);
+                computedResult = ParseResult(trimmedMeanVM.Result);
+                covarianceMatrixText = $"{trimmedMeanVM.CovarianceMatrix}";
+                break;
+
+            case HuberMethodViewModel huberVM:
+                methodParameter = $"Delta: {huberVM.TuningConstant}";
+                methodProcessedDataset = string.Join(", ", huberVM.ProcessedDataset);
+                computedResult = ParseResult(huberVM.Result);
+                covarianceMatrixText = $"{huberVM.CovarianceMatrix}";
+                break;
+
+            case LMSMethodViewModel lmsVM:
+                methodParameter = "LMS Estimator (default settings)";
+                methodProcessedDataset = string.Join(", ", lmsVM.ProcessedErrors);
+                computedResult = ParseResult(lmsVM.Result);
+                covarianceMatrixText = $"{lmsVM.CovarianceMatrix}";
+                break;
+
+            case TheilSenMethodViewModel theilSenVM:
+                methodParameter = "Theil-Sen Estimator";
+                methodProcessedDataset = string.Join(", ", theilSenVM.ProcessedSlopes);
+                computedResult = ParseResult(theilSenVM.Result);
+                break;
+
+            case MedianMethodViewModel medianVM:
+                methodParameter = "Median Estimator";
+                computedResult = ParseResult(medianVM.Result);
+                break;
+        }
+
+        return (methodParameter, methodProcessedDataset, computedResult, covarianceMatrixText);
+    }
+
+    private double ParseResult(string resultText)
+    {
+        if (string.IsNullOrEmpty(resultText)) return double.NaN;
+        resultText = resultText.Replace("Result:", "").Trim().Replace(',', '.');
+        return double.TryParse(resultText, NumberStyles.Any, CultureInfo.InvariantCulture, out var res) ? res : double.NaN;
     }
 }

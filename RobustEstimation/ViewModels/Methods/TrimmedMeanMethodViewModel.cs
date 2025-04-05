@@ -1,19 +1,27 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using OxyPlot;
+using OxyPlot.Annotations;
+using OxyPlot.Series;
 using RobustEstimation.Models;
 
 namespace RobustEstimation.ViewModels.Methods
 {
-    public partial class TrimmedMeanMethodViewModel : ViewModelBase
+    public partial class TrimmedMeanMethodViewModel : ViewModelBase, IGraphable
     {
         private readonly Dataset _dataset;
         private readonly MainWindowViewModel _mainViewModel;
         private CancellationTokenSource _cts;
+
+        private List<double> _allData = new();
+        private List<double> _trimmedData = new();
+        private double _trimmedMean = 0;
 
         [ObservableProperty]
         private string result = "Not computed";
@@ -61,7 +69,11 @@ namespace RobustEstimation.ViewModels.Methods
                 var estimator = new TrimmedMeanEstimator(TrimPercentage);
                 double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
-                string processedData = $"[{string.Join(", ", estimator.ProcessedData.Take(100))}]";
+                _allData = _dataset.Values.ToList();
+                _trimmedData = estimator.ProcessedData.ToList();
+                _trimmedMean = result;
+
+                string processedData = $"[{string.Join(", ", _trimmedData.Take(100))}]";
 
                 string covarianceMatrixFormatted = estimator.CovarianceMatrix != null
                     ? $"{estimator.CovarianceMatrix[0, 0]:F4}"
@@ -83,5 +95,48 @@ namespace RobustEstimation.ViewModels.Methods
                 await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
             }
         }
+
+        public IEnumerable<Series> GetSeries()
+        {
+            var fullSeries = new ScatterSeries
+            {
+                Title = "All Data",
+                MarkerType = MarkerType.Circle,
+                MarkerFill = OxyColors.Gray
+            };
+
+            for (int i = 0; i < _allData.Count; i++)
+                fullSeries.Points.Add(new ScatterPoint(i, _allData[i]));
+
+            var trimmedSeries = new ScatterSeries
+            {
+                Title = "Trimmed Data",
+                MarkerType = MarkerType.Circle,
+                MarkerFill = OxyColors.Blue
+            };
+
+            for (int i = 0; i < _trimmedData.Count; i++)
+                trimmedSeries.Points.Add(new ScatterPoint(i, _trimmedData[i]));
+
+            return new[] { fullSeries, trimmedSeries };
+        }
+
+        public IEnumerable<Annotation> GetAnnotations()
+        {
+            return new[]
+            {
+                new LineAnnotation
+                {
+                    Type = LineAnnotationType.Horizontal,
+                    Y = _trimmedMean,
+                    Color = OxyColors.Red,
+                    Text = $"Trimmed Mean = {_trimmedMean:F2}",
+                    TextVerticalAlignment = VerticalAlignment.Top,
+                    TextHorizontalAlignment = HorizontalAlignment.Left
+                }
+            };
+        }
+
+        public string GetGraphTitle() => "Trimmed Mean Plot";
     }
 }

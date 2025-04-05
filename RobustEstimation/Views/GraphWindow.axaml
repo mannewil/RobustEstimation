@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:oxy="clr-namespace:OxyPlot.Avalonia;assembly=OxyPlot.AvaloniaCore"
+		xmlns:vm="using:RobustEstimation.ViewModels"
+        x:Class="RobustEstimation.Views.GraphWindow"
+        x:DataType="vm:GraphWindowViewModel"	
+        Title="Graph" Width="600" Height="400">
+
+	<Grid RowDefinitions="*">
+		<oxy:PlotView Model="{Binding PlotModel}" Grid.Row="0"/>
+	</Grid>
+	
+</Window>
