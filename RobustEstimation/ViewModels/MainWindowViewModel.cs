@@ -32,6 +32,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string selectedLanguage;
 
     [ObservableProperty]
+    private bool isGraphAvailable;
+
+    [ObservableProperty]
     private double progress;
 
     [ObservableProperty]
@@ -155,6 +158,7 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedMethodChanged(string value)
     {
         UpdateMethodView();
+        IsGraphAvailable = false;
     }
 
     partial void OnInputNumbersChanged(string value)

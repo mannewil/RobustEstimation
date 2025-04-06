@@ -19,4 +19,7 @@ public interface IGraphable
     /// Заголовок графика.
     /// </summary>
     string GetGraphTitle();
+
+    double? GetHorizontalLineValue();
+    string? GetLineLabel();
 }

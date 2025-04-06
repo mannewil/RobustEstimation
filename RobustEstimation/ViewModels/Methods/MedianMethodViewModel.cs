@@ -8,73 +8,72 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RobustEstimation.Models;
 
-namespace RobustEstimation.ViewModels.Methods
+namespace RobustEstimation.ViewModels.Methods;
+
+public partial class MedianMethodViewModel : ViewModelBase
 {
-    public partial class MedianMethodViewModel : ViewModelBase
+    private readonly Dataset _dataset;
+    private readonly MainWindowViewModel _mainViewModel;
+    private CancellationTokenSource _cts;
+
+    [ObservableProperty]
+    private string result = "Not computed";
+
+    [ObservableProperty]
+    private double progress;
+
+    public MedianMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
     {
-        private readonly Dataset _dataset;
-        private readonly MainWindowViewModel _mainViewModel;
-        private CancellationTokenSource _cts;
+        _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
+        _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
+        ComputeCommand = new AsyncRelayCommand(ComputeMedianAsync, () => _dataset.Values.Any());
+        _dataset.PropertyChanged += (_, _) => ComputeCommand.NotifyCanExecuteChanged();
+    }
 
-        [ObservableProperty]
-        private string result = "Not computed";
+    public IAsyncRelayCommand ComputeCommand { get; }
 
-        [ObservableProperty]
-        private double progress;
+    private async Task ComputeMedianAsync()
+    {
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        Result = "Calculating...";
+        Progress = 0;
+        _mainViewModel.Progress = 0;
 
-        public MedianMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
+        var progress = new Progress<double>(p =>
         {
-            _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
-            _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
-            ComputeCommand = new AsyncRelayCommand(ComputeMedianAsync, () => _dataset.Values.Any());
-            _dataset.PropertyChanged += (_, _) => ComputeCommand.NotifyCanExecuteChanged();
-        }
+            Progress = p;
+            _mainViewModel.Progress = p;
+        });
 
-        public IAsyncRelayCommand ComputeCommand { get; }
-
-        private async Task ComputeMedianAsync()
+        try
         {
-            _cts?.Cancel();
-            _cts = new CancellationTokenSource();
-            Result = "Calculating...";
-            Progress = 0;
-            _mainViewModel.Progress = 0;
+            var values = _dataset.Values.OrderBy(x => x).ToArray();
+            int count = values.Length;
+            if (count == 0)
+                throw new InvalidOperationException("No data available");
 
-            var progress = new Progress<double>(p =>
+            double median = await Task.Run(() =>
             {
-                Progress = p;
-                _mainViewModel.Progress = p;
-            });
-
-            try
-            {
-                var values = _dataset.Values.OrderBy(x => x).ToArray();
-                int count = values.Length;
-                if (count == 0)
-                    throw new InvalidOperationException("No data available");
-
-                double median = await Task.Run(() =>
+                for (int i = 0; i < count; i++)
                 {
-                    for (int i = 0; i < count; i++)
-                    {
-                        ((IProgress<double>)progress).Report(((i + 1) / (double)count) * 100);
-                    }
+                    ((IProgress<double>)progress).Report(((i + 1) / (double)count) * 100);
+                }
 
-                    return count % 2 == 0
-                        ? (values[count / 2 - 1] + values[count / 2]) / 2.0
-                        : values[count / 2];
-                }, _cts.Token);
+                return count % 2 == 0
+                    ? (values[count / 2 - 1] + values[count / 2]) / 2.0
+                    : values[count / 2];
+            }, _cts.Token);
 
-                await Dispatcher.UIThread.InvokeAsync(() => Result = $"Result: {median:F2}");
-            }
-            catch (OperationCanceledException)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
-            }
-            catch (Exception ex)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
-            }
+            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Result: {median:F2}");
+        }
+        catch (OperationCanceledException)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
         }
     }
 }

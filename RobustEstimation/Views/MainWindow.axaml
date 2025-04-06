@@ -35,7 +35,7 @@
 			<StackPanel Orientation="Horizontal" Spacing="10">
 				<Button Content="Load File" Width="120" Command="{Binding LoadFileCommand}"/>
 				<Button Content="Save Result" Width="120" Command="{Binding SaveFileCommand}"/>
-				<Button Content="Show Graph" Width="120" Command="{Binding ShowGraphCommand}" />
+				<Button Content="Show Graph" Width="120" Command="{Binding ShowGraphCommand}" IsEnabled="{Binding IsGraphAvailable}"/>
 				<ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="20" />
 			</StackPanel>
 		</StackPanel>

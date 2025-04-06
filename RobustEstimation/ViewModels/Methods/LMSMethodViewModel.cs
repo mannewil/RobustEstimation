@@ -7,78 +7,107 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RobustEstimation.Models;
+using OxyPlot.Annotations;
+using OxyPlot.Series;
+using OxyPlot;
+using System.Collections.Generic;
 
-namespace RobustEstimation.ViewModels.Methods
+namespace RobustEstimation.ViewModels.Methods;
+
+public partial class LMSMethodViewModel : ViewModelBase, IGraphable
 {
-    public partial class LMSMethodViewModel : ViewModelBase
+    private readonly Dataset _dataset;
+    private readonly MainWindowViewModel _mainViewModel;
+    private CancellationTokenSource _cts;
+    private List<double> _squaredErrors = new();
+    private double _lmsValue = 0;
+
+    [ObservableProperty]
+    private string result = "Not computed";
+
+    [ObservableProperty]
+    private string processedErrors = "";
+
+    [ObservableProperty]
+    private string covarianceMatrix = "";
+
+    [ObservableProperty]
+    private double progress;
+
+    public LMSMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
     {
-        private readonly Dataset _dataset;
-        private readonly MainWindowViewModel _mainViewModel;
-        private CancellationTokenSource _cts;
+        _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
+        _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
+        ComputeCommand = new AsyncRelayCommand(ComputeLMSAsync, () => _dataset.Values.Any());
+        _dataset.PropertyChanged += (_, _) => ComputeCommand.NotifyCanExecuteChanged();
+    }
 
-        [ObservableProperty]
-        private string result = "Not computed";
+    public IAsyncRelayCommand ComputeCommand { get; }
 
-        [ObservableProperty]
-        private string processedErrors = "";
+    private async Task ComputeLMSAsync()
+    {
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        Result = "Calculating...";
+        ProcessedErrors = "";
+        CovarianceMatrix = "";
+        Progress = 0;
+        _mainViewModel.Progress = 0;
 
-        [ObservableProperty]
-        private string covarianceMatrix = "";
-
-        [ObservableProperty]
-        private double progress;
-
-        public LMSMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
+        var progress = new Progress<int>(p =>
         {
-            _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
-            _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
-            ComputeCommand = new AsyncRelayCommand(ComputeLMSAsync, () => _dataset.Values.Any());
-            _dataset.PropertyChanged += (_, _) => ComputeCommand.NotifyCanExecuteChanged();
-        }
+            Progress = p;
+            _mainViewModel.Progress = p;
+        });
 
-        public IAsyncRelayCommand ComputeCommand { get; }
-
-        private async Task ComputeLMSAsync()
+        try
         {
-            _cts?.Cancel();
-            _cts = new CancellationTokenSource();
-            Result = "Calculating...";
-            ProcessedErrors = "";
-            CovarianceMatrix = "";
-            Progress = 0;
-            _mainViewModel.Progress = 0;
+            var estimator = new LMSEstimator();
+            double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
 
-            var progress = new Progress<int>(p =>
+            _squaredErrors = estimator.ProcessedErrors.ToList();
+            _lmsValue = result;
+
+            string processedData = $"[{string.Join(", ", _squaredErrors.Take(100))}]";
+            string covarianceData = estimator.CovarianceMatrix != null
+                ? $"[{estimator.CovarianceMatrix[0, 0]:F4}]"
+                : "[N/A]";
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Progress = p;
-                _mainViewModel.Progress = p;
+                Result = $"Result: {result:F2}";
+                ProcessedErrors = $"Computed squared errors: {processedData}";
+                CovarianceMatrix = $"Covariance matrix: {covarianceData}";
+                _mainViewModel.IsGraphAvailable = true;
             });
-
-            try
-            {
-                var estimator = new LMSEstimator();
-                double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
-
-                string processedData = $"[{string.Join(", ", estimator.ProcessedErrors.Take(100))}]";
-                string covarianceData = estimator.CovarianceMatrix != null
-                    ? $"[{estimator.CovarianceMatrix[0, 0]:F4}]"
-                    : "[N/A]";
-
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    Result = $"Result: {result:F2}";
-                    ProcessedErrors = $"Computed squared errors: {processedData}";
-                    CovarianceMatrix = $"Covariance matrix: {covarianceData}";
-                });
-            }
-            catch (OperationCanceledException)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
-            }
-            catch (Exception ex)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
         }
     }
+
+    public IEnumerable<Series> GetSeries()
+    {
+        var errorSeries = new ScatterSeries
+        {
+            Title = "Squared Errors",
+            MarkerType = MarkerType.Circle,
+            MarkerFill = OxyColors.OrangeRed
+        };
+
+        for (int i = 0; i < _squaredErrors.Count; i++)
+            errorSeries.Points.Add(new ScatterPoint(i, _squaredErrors[i]));
+
+        return new[] { errorSeries };
+    }
+
+    public double? GetHorizontalLineValue() => _lmsValue;
+    public string? GetLineLabel() => $"LMS = {_lmsValue:F2}";
+    public IEnumerable<Annotation> GetAnnotations() => Enumerable.Empty<Annotation>();
+    public string GetGraphTitle() => "LMS Estimator Plot";
 }

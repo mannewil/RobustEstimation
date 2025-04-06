@@ -18,22 +18,42 @@ public partial class GraphWindowViewModel : ViewModelBase
             Title = graphable.GetGraphTitle(),
             TextColor = OxyColors.White,
             PlotAreaBorderColor = OxyColors.White,
-            //LegendTextColor = OxyColors.White,
             TitleColor = OxyColors.White,
             Background = OxyColors.Black,
+            // Увеличенные отступы, чтобы надписи не обрезались
+            PlotMargins = new OxyThickness(60, 10, 100, 50)
         };
 
+        // Добавление серий
         foreach (var series in graphable.GetSeries())
         {
-            // Установим цвет точек, если они ещё не настроены
-            if (series is ScatterSeries scatter)
-            {
-                scatter.MarkerFill = scatter.MarkerFill.IsInvisible() ? OxyColors.LightGray : scatter.MarkerFill;
-            }
+            if (series is ScatterSeries scatter && scatter.MarkerFill.IsInvisible())
+                scatter.MarkerFill = OxyColors.LightGreen;
 
             model.Series.Add(series);
         }
 
+        // Добавление горизонтальной линии, если есть значение
+        if (graphable.GetHorizontalLineValue() is double y)
+        {
+            var line = new LineAnnotation
+            {
+                Type = LineAnnotationType.Horizontal,
+                Y = y,
+                Color = OxyColors.Red,
+                LineStyle = LineStyle.Solid,
+                StrokeThickness = 2,
+                Text = graphable.GetLineLabel() ?? "",
+                TextHorizontalAlignment = HorizontalAlignment.Right,
+                TextVerticalAlignment = VerticalAlignment.Top,
+                TextMargin = 10,
+                TextColor = OxyColors.White
+            };
+
+            model.Annotations.Add(line);
+        }
+
+        // Добавление дополнительных аннотаций (если есть)
         foreach (var annotation in graphable.GetAnnotations())
         {
             if (annotation is LineAnnotation line)
@@ -48,5 +68,4 @@ public partial class GraphWindowViewModel : ViewModelBase
         PlotModel = model;
         OnPropertyChanged(nameof(PlotModel));
     }
-
 }
