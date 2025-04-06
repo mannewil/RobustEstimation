@@ -63,10 +63,10 @@ public partial class LMSMethodViewModel : ViewModelBase, IGraphable
         try
         {
             var estimator = new LMSEstimator();
-            double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
+            var result = await estimator.ComputeWithTimingAsync(_dataset, progress, _cts.Token);
 
             _squaredErrors = estimator.ProcessedErrors.ToList();
-            _lmsValue = result;
+            _lmsValue = result.result;
 
             string processedData = $"[{string.Join(", ", _squaredErrors.Take(100))}]";
             string covarianceData = estimator.CovarianceMatrix != null
@@ -75,7 +75,7 @@ public partial class LMSMethodViewModel : ViewModelBase, IGraphable
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Result = $"Result: {result:F2}";
+                Result = $"Result: {result.result:F2} (Time: {result.duration.TotalMilliseconds} ms)";
                 ProcessedErrors = $"Computed squared errors: {processedData}";
                 CovarianceMatrix = $"Covariance matrix: {covarianceData}";
                 _mainViewModel.IsGraphAvailable = true;

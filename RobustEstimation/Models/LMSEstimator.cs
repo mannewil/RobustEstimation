@@ -11,7 +11,7 @@ namespace RobustEstimation.Models
         public List<double> ProcessedErrors { get; private set; } = new();
         public double[,] CovarianceMatrix { get; private set; }
 
-        public override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
+        protected override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
             {
@@ -19,13 +19,13 @@ namespace RobustEstimation.Models
                     throw new ArgumentException("Dataset cannot be empty.");
 
                 var squaredErrors = new List<double>();
-                double median = new MedianEstimator().ComputeAsync(data, progress, cancellationToken).Result;
+                var median = new MedianEstimator().ComputeWithTimingAsync(data, progress, cancellationToken).Result;
                 int processed = 0, count = data.Values.Count;
 
                 foreach (var value in data.Values)
                 {
                     if (cancellationToken.IsCancellationRequested) throw new OperationCanceledException();
-                    double error = Math.Pow(value - median, 2);
+                    double error = Math.Pow(value - median.result, 2);
                     squaredErrors.Add(error);
                     processed++;
                     progress?.Report((processed * 100) / count);

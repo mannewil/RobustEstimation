@@ -52,13 +52,13 @@ public partial class TheilSenMethodViewModel : ViewModelBase
         try
         {
             var estimator = new TheilSenEstimator();
-            double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
+            var result = await estimator.ComputeWithTimingAsync(_dataset, progress, _cts.Token);
             
             string processedData = $"[{string.Join(", ", estimator.ProcessedSlopes.Take(100))}]";
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Result = $"Result: {result:F2}";
+                Result = $"Result: {result.result:F2} (Time: {result.duration.TotalMilliseconds} ms)";
                 ProcessedSlopes = $"Computed slopes: {processedData}";
             });
         }

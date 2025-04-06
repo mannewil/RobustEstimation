@@ -68,9 +68,9 @@ public partial class HuberMethodViewModel : ViewModelBase, IGraphable
         try
         {
             var estimator = new HuberEstimator(TuningConstant);
-            double result = await Task.Run(async () =>
+            var result = await Task.Run(async () =>
             {
-                double estimation = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
+                var estimation = await estimator.ComputeWithTimingAsync(_dataset, progress, _cts.Token);
                 for (int i = 0; i <= 100; i++)
                 {
                     ((IProgress<int>)progress).Report(i);
@@ -81,11 +81,11 @@ public partial class HuberMethodViewModel : ViewModelBase, IGraphable
 
             _allData = _dataset.Values.ToList();
             _processedData = estimator.ProcessedValues.ToList();
-            _mean = result;
+            _mean = result.result;
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Result = $"Result: {result:F2}";
+                Result = $"Result: {result.result:F2} (Time: {result.duration.TotalMilliseconds} ms)";
                 ProcessedDataset = $"Processed dataset: [{string.Join(", ", estimator.ProcessedValues.Take(100).Select(x => x.ToString("F3")))}]";
                 CovarianceMatrix = $"Covariance matrix: {estimator.CovarianceMatrix[0, 0].ToString("F4", CultureInfo.InvariantCulture)}";
                 _mainViewModel.IsGraphAvailable = true;

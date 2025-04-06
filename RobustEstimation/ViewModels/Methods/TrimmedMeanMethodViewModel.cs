@@ -67,11 +67,11 @@ public partial class TrimmedMeanMethodViewModel : ViewModelBase, IGraphable
         try
         {
             var estimator = new TrimmedMeanEstimator(TrimPercentage);
-            double result = await estimator.ComputeAsync(_dataset, progress, _cts.Token);
+            var result = await estimator.ComputeWithTimingAsync(_dataset, progress, _cts.Token);
 
             _allData = _dataset.Values.ToList();
             _trimmedData = estimator.ProcessedData.ToList();
-            _trimmedMean = result;
+            _trimmedMean = result.result;
 
             string processedData = $"[{string.Join(", ", _trimmedData.Take(100))}]";
             string covarianceMatrixFormatted = estimator.CovarianceMatrix != null
@@ -80,7 +80,7 @@ public partial class TrimmedMeanMethodViewModel : ViewModelBase, IGraphable
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Result = $"Result: {result:F2}";
+                Result = $"Result: {result.result:F2} (Time: {result.duration.TotalMilliseconds} ms)";
                 ProcessedDataset = $"Processed dataset: {processedData}";
                 CovarianceMatrix = $"Covariance matrix: {covarianceMatrixFormatted}";
                 _mainViewModel.IsGraphAvailable = true;

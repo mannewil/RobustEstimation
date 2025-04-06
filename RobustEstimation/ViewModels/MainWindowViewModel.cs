@@ -44,6 +44,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string inputNumbers;
 
     [ObservableProperty]
+    private string executionTime;
+
+    [ObservableProperty]
     private ViewModelBase currentMethodViewModel;
 
     [ObservableProperty]
@@ -110,6 +113,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _cts = new CancellationTokenSource();
         Progress = 0;
         Result = "Calculating...";
+        ExecutionTime = ""; // Сброс предыдущего значения
 
         var progress = new Progress<int>(p => Progress = p);
 
@@ -127,15 +131,15 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             try
             {
-                double computedResult = await estimator.ComputeAsync(Dataset, progress, _cts.Token);
-                Result = $"Result: {computedResult:F2}";
+                var (computedResult, duration) = await estimator.ComputeWithTimingAsync(Dataset, progress, _cts.Token);
+                Result = $"Result: {computedResult:F2} (Time: {duration.TotalMilliseconds} ms)";
             }
             catch (OperationCanceledException)
             {
                 Result = "Calculation canceled.";
             }
         }
-    }
+    }    
 
     [RelayCommand]
     private void ShowGraph()

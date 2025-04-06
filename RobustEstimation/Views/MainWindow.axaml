@@ -37,7 +37,10 @@
 				<Button Content="Save Result" Width="120" Command="{Binding SaveFileCommand}"/>
 				<Button Content="Show Graph" Width="120" Command="{Binding ShowGraphCommand}" IsEnabled="{Binding IsGraphAvailable}"/>
 				<ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="20" />
+				<TextBlock Text="{Binding ExecutionTime}" FontSize="12" Foreground="Gray"/>
 			</StackPanel>
+
+			
 		</StackPanel>
 	</Grid>
 </Window>

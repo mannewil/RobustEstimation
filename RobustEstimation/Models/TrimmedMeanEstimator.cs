@@ -28,7 +28,7 @@ namespace RobustEstimation.Models
             TrimPercentage = trimPercentage;
         }
 
-        public override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
+        protected override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
             {
