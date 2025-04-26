@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,118 +12,114 @@ using OxyPlot.Annotations;
 using OxyPlot.Series;
 using RobustEstimation.Models;
 
-namespace RobustEstimation.ViewModels.Methods;
-
-public partial class TrimmedMeanMethodViewModel : ViewModelBase, IGraphable
+namespace RobustEstimation.ViewModels.Methods
 {
-    private readonly Dataset _dataset;
-    private readonly MainWindowViewModel _mainViewModel;
-    private CancellationTokenSource _cts;
-
-    private List<double> _allData = new();
-    private List<double> _trimmedData = new();
-    private double _trimmedMean = 0;
-
-    [ObservableProperty]
-    private string result = "Not computed";
-
-    [ObservableProperty]
-    private string processedDataset = "";
-
-    [ObservableProperty]
-    private string covarianceMatrix = "";
-
-    [ObservableProperty]
-    private double progress;
-
-    [ObservableProperty]
-    private double trimPercentage = 0.1;
-
-    public TrimmedMeanMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
+    public partial class TrimmedMeanMethodViewModel : ViewModelBase, IGraphable
     {
-        _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
-        _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
-        ComputeCommand = new AsyncRelayCommand(ComputeTrimmedMeanAsync, () => _dataset.Values.Any());
-        _dataset.PropertyChanged += (_, _) => ComputeCommand.NotifyCanExecuteChanged();
-    }
+        private readonly Dataset _dataset;
+        private readonly MainWindowViewModel _mainVM;
+        private CancellationTokenSource _cts;
 
-    public IAsyncRelayCommand ComputeCommand { get; }
+        private List<double> _allData = new();
+        private List<double> _trimmed = new();
+        private double _mean = 0;
 
-    private async Task ComputeTrimmedMeanAsync()
-    {
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        Result = "Calculating...";
-        ProcessedDataset = "";
-        CovarianceMatrix = "";
-        Progress = 0;
-        _mainViewModel.Progress = 0;
+        [ObservableProperty] 
+        private double trimPercentage = 0.1;
+        [ObservableProperty] 
+        private double progress;
+        [ObservableProperty] 
+        private string result = "Not computed";
+        [ObservableProperty] 
+        private string processedData = "";
+        [ObservableProperty] 
+        private string covarianceMatrix = "";
 
-        var progress = new Progress<int>(p =>
+        public IAsyncRelayCommand ComputeCommand { get; }
+
+        public TrimmedMeanMethodViewModel(Dataset dataset, MainWindowViewModel mainVM)
         {
-            Progress = p;
-            _mainViewModel.Progress = p;
-        });
+            _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
+            _mainVM = mainVM ?? throw new ArgumentNullException(nameof(mainVM));
+            ComputeCommand = new AsyncRelayCommand(ComputeAsync, () => _dataset.Values.Any());
+            _dataset.PropertyChanged += (_, __) => ComputeCommand.NotifyCanExecuteChanged();
+        }
 
-        try
+        private async Task ComputeAsync()
         {
-            var estimator = new TrimmedMeanEstimator(TrimPercentage);
-            var result = await estimator.ComputeWithTimingAsync(_dataset, progress, _cts.Token);
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+            Result = "Calculating...";
+            ProcessedData = "";
+            CovarianceMatrix = "";
+            Progress = 0;
+            _mainVM.Progress = 0;
 
-            _allData = _dataset.Values.ToList();
-            _trimmedData = estimator.ProcessedData.ToList();
-            _trimmedMean = result.result;
-
-            string processedData = $"[{string.Join(", ", _trimmedData.Take(100))}]";
-            string covarianceMatrixFormatted = estimator.CovarianceMatrix != null
-                ? $"{estimator.CovarianceMatrix[0, 0]:F4}"
-                : "Error calculating covariance";
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            var prog = new Progress<int>(p =>
             {
-                Result = $"Result: {result.result:F2} (Time: {result.duration.TotalMilliseconds} ms)";
-                ProcessedDataset = $"Processed dataset: {processedData}";
-                CovarianceMatrix = $"Covariance matrix: {covarianceMatrixFormatted}";
-                _mainViewModel.IsGraphAvailable = true;
+                Progress = p;
+                _mainVM.Progress = p;
             });
+
+            try
+            {
+                var est = new TrimmedMeanEstimator(TrimPercentage);
+                var (mean, duration) = await est.ComputeWithTimingAsync(_dataset, prog, _cts.Token);
+
+                _allData = _dataset.Values.ToList();
+                _trimmed = est.ProcessedData.ToList();
+                _mean = mean;
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Result = $"Result: {_mean:F2}  (Time: {duration.TotalMilliseconds:F0} ms)";
+                    ProcessedData = $"[ {string.Join(", ", _trimmed.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))} ]";
+                    CovarianceMatrix = FormatMatrix(est.CovarianceMatrix);
+                    _mainVM.IsGraphAvailable = true;
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
+            }
+            catch (Exception ex)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
+            }
         }
-        catch (OperationCanceledException)
+
+        public IEnumerable<Series> GetSeries()
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
+            var all = new ScatterSeries { Title = "All Data", MarkerType = MarkerType.Circle };
+            for (int i = 0; i < _allData.Count; i++)
+                all.Points.Add(new ScatterPoint(i, _allData[i]));
+
+            var trim = new ScatterSeries { Title = "Trimmed", MarkerType = MarkerType.Circle, MarkerFill = OxyColors.Blue };
+            for (int i = 0; i < _trimmed.Count; i++)
+                trim.Points.Add(new ScatterPoint(i, _trimmed[i]));
+
+            return new[] { all, trim };
         }
-        catch (Exception ex)
+
+        public IEnumerable<Annotation> GetAnnotations()
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
+            return new[]
+            {
+                new LineAnnotation
+                {
+                    Type = LineAnnotationType.Horizontal,
+                    Y = _mean,
+                    Color = OxyColors.Red,
+                    Text = $"Trimmed Mean = {_mean:F2}",
+                    TextHorizontalAlignment = HorizontalAlignment.Left,
+                    TextVerticalAlignment = VerticalAlignment.Top,
+                    TextMargin = 4
+                }
+            };
         }
+
+        public string GetGraphTitle() => "Trimmed Mean Plot";
+        public double? GetHorizontalLineValue() => _mean;
+        public string? GetLineLabel() => $"Mean = {_mean:F2}";
     }
-
-    public IEnumerable<Series> GetSeries()
-    {
-        var fullSeries = new ScatterSeries
-        {
-            Title = "All Data",
-            MarkerType = MarkerType.Circle,
-            MarkerFill = OxyColors.Gray
-        };
-
-        for (int i = 0; i < _allData.Count; i++)
-            fullSeries.Points.Add(new ScatterPoint(i, _allData[i]));
-
-        var trimmedSeries = new ScatterSeries
-        {
-            Title = "Trimmed Data",
-            MarkerType = MarkerType.Circle,
-            MarkerFill = OxyColors.Blue
-        };
-
-        for (int i = 0; i < _trimmedData.Count; i++)
-            trimmedSeries.Points.Add(new ScatterPoint(i, _trimmedData[i]));
-
-        return new[] { fullSeries, trimmedSeries };
-    }
-
-    public double? GetHorizontalLineValue() => _trimmedMean;
-    public string? GetLineLabel() => $"Trimmed Mean = {_trimmedMean:F2}";
-    public IEnumerable<Annotation> GetAnnotations() => Enumerable.Empty<Annotation>();
-    public string GetGraphTitle() => "Trimmed Mean Plot";
 }

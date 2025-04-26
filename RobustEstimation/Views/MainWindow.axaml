@@ -1,11 +1,13 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:RobustEstimation.ViewModels"
-        xmlns:vmm="using:RobustEstimation.ViewModels.Methods"
-        xmlns:views="using:RobustEstimation.Views.Methods"
-        x:Class="RobustEstimation.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Title="Robust Estimators" Width="900" Height="700">
+<Window
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:RobustEstimation.ViewModels"
+  xmlns:vmm="using:RobustEstimation.ViewModels.Methods"
+  xmlns:loc="clr-namespace:RobustEstimation.Properties"
+  x:Class="RobustEstimation.Views.MainWindow"
+  x:DataType="vm:MainWindowViewModel"
+  Title="{loc:Loc Key=AppTitle}"
+  Width="900" Height="700">
 
 	<Grid>
 		<Grid.RowDefinitions>
@@ -14,33 +16,71 @@
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 
-		<!-- Верхняя панель -->
+		<!-- Top bar: method & language selectors -->
 		<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
-			<ComboBox Width="200" ItemsSource="{Binding Methods}" SelectedItem="{Binding SelectedMethod}"/>
-			<ComboBox Width="100" ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"/>
+			<ComboBox ItemsSource="{Binding Methods}"
+					  SelectedItem="{Binding SelectedMethod}">
+				<ComboBox.ItemTemplate>
+					<DataTemplate>
+						<TextBlock Text="{Binding Converter={StaticResource MethodTypeToString}}"/>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+
+			<ComboBox ItemsSource="{Binding Languages}"
+					  SelectedItem="{Binding SelectedLanguage}">
+				<ComboBox.ItemTemplate>
+					<DataTemplate>
+						<TextBlock Text="{Binding Converter={StaticResource LanguageToString}}"/>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
 		</StackPanel>
 
-		<!-- Контейнер для метода -->
-		<Border Grid.Row="1" MinHeight="200" Margin="10" BorderThickness="1" BorderBrush="Gray">
+		<!-- Method UI -->
+		<Border
+		  Grid.Row="1"
+		  MinHeight="200"
+		  Margin="10"
+		  BorderThickness="1"
+		  BorderBrush="Gray">
 			<ScrollViewer VerticalScrollBarVisibility="Auto">
-				<ContentControl Content="{Binding CurrentMethodViewModel}">
-				</ContentControl>
+				<ContentControl Content="{Binding CurrentMethodViewModel}"/>
 			</ScrollViewer>
 		</Border>
 
-		<!-- Нижняя панель -->
+		<!-- Bottom bar: input, buttons, progress -->
 		<StackPanel Grid.Row="2" Orientation="Vertical" Spacing="10">
-			<TextBlock Text="Input Numbers:" FontSize="14"/>
-			<TextBox Text="{Binding InputNumbers, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="100"/>
+			<TextBlock Text="{loc:Loc Key=Label_InputNumbers}" FontSize="14"/>
+			<TextBox
+			  Text="{Binding InputNumbers, UpdateSourceTrigger=PropertyChanged}"
+			  Watermark="{Binding InputPlaceholder}"
+			  AcceptsReturn="True"
+			  Height="100"/>
 			<StackPanel Orientation="Horizontal" Spacing="10">
-				<Button Content="Load File" Width="120" Command="{Binding LoadFileCommand}"/>
-				<Button Content="Save Result" Width="120" Command="{Binding SaveFileCommand}"/>
-				<Button Content="Show Graph" Width="120" Command="{Binding ShowGraphCommand}" IsEnabled="{Binding IsGraphAvailable}"/>
-				<ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="20" />
-				<TextBlock Text="{Binding ExecutionTime}" FontSize="12" Foreground="Gray"/>
+				<Button
+				  Content="{loc:Loc Key=Button_LoadFile}"
+				  Width="150"				  
+				  Command="{Binding LoadFileCommand}"/>
+				<Button
+				  Content="{loc:Loc Key=Button_SaveResult}"
+				  Width="170"
+				  Command="{Binding SaveFileCommand}"/>
+				<Button
+				  Content="{loc:Loc Key=Button_ShowGraph}"
+				  Width="150"
+				  Command="{Binding ShowGraphCommand}"
+				  IsEnabled="{Binding IsGraphAvailable}"/>
+				<ProgressBar
+				  Minimum="0"
+				  Maximum="100"
+				  Value="{Binding Progress}"
+				  Height="20"/>
+				<TextBlock
+				  Text="{Binding ExecutionTime}"
+				  FontSize="12"
+				  Foreground="Gray"/>
 			</StackPanel>
-
-			
 		</StackPanel>
 	</Grid>
 </Window>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// HuberMethodViewModel.cs
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -7,125 +8,222 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using OxyPlot;
 using OxyPlot.Annotations;
 using OxyPlot.Series;
-using OxyPlot;
 using RobustEstimation.Models;
+using RobustEstimation.Models.Regression;
 
-namespace RobustEstimation.ViewModels.Methods;
-
-public partial class HuberMethodViewModel : ViewModelBase, IGraphable
+namespace RobustEstimation.ViewModels.Methods
 {
-    private readonly MainWindowViewModel _mainViewModel;
-    private CancellationTokenSource _cts;
-    private readonly Dataset _dataset;
-    private List<double> _allData = new();
-    private List<double> _processedData = new();
-    private double _mean = 0;
-
-    [ObservableProperty]
-    private double progress;
-
-    [ObservableProperty]
-    private double tuningConstant = 1.345;
-
-    [ObservableProperty]
-    private string result = "Not computed";
-
-    [ObservableProperty]
-    private string processedDataset = "";
-
-    [ObservableProperty]
-    private string covarianceMatrix = "";
-
-    public IRelayCommand ComputeCommand { get; }
-
-    public HuberMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
+    public partial class HuberMethodViewModel : ViewModelBase, IGraphable
     {
-        _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
-        _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
-        ComputeCommand = new AsyncRelayCommand(ComputeAsync);
-    }
+        private readonly Dataset _dataset;
+        private readonly MainWindowViewModel _mainVM;
+        private CancellationTokenSource _cts;
 
-    private async Task ComputeAsync()
-    {
-        if (_dataset == null || _dataset.Values.Count == 0) return;
+        // regression result for save/export
+        public RegressionResult? LastRegressionResult { get; private set; }
 
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        Result = "Calculating...";
-        ProcessedDataset = "";
-        CovarianceMatrix = "";
-        Progress = 0;
-        _mainViewModel.Progress = 0;
+        // for simple M‑estimate
+        private List<double> _orig = new(), _adj = new();
+        private double _mean;
 
-        var progress = new Progress<int>(p =>
+        // for regression
+        private List<(double x, double y)> _pts = new();
+        private double _slope, _intercept;
+
+        [ObservableProperty]
+        private double tuningConstant = 1.345;
+
+        [ObservableProperty]
+        private bool isRegressionMode;
+
+        [ObservableProperty]
+        private bool canCompute;
+
+        [ObservableProperty]
+        private double progress;
+
+        [ObservableProperty]
+        private string result = "Not computed";
+
+        [ObservableProperty]
+        private string processedData = "";
+
+        [ObservableProperty]
+        private string covarianceMatrix = "";
+        public IAsyncRelayCommand ComputeCommand { get; }
+
+        public string InputPlaceholder =>
+            IsRegressionMode
+                ? "Enter points as x,y; x2,y2; …"
+                : "Enter numbers as v1, v2, v3; …";
+
+        public HuberMethodViewModel(Dataset dataset, MainWindowViewModel mainVM)
         {
-            Progress = p;
-            _mainViewModel.Progress = p;
-        });
+            _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
+            _mainVM = mainVM ?? throw new ArgumentNullException(nameof(mainVM));
 
-        try
-        {
-            var estimator = new HuberEstimator(TuningConstant);
-            var result = await Task.Run(async () =>
+            ComputeCommand = new AsyncRelayCommand(ComputeAsync);
+            _dataset.PropertyChanged += (_, __) => UpdateCanCompute();
+            this.PropertyChanged += (_, e) =>
             {
-                var estimation = await estimator.ComputeWithTimingAsync(_dataset, progress, _cts.Token);
-                for (int i = 0; i <= 100; i++)
+                if (e.PropertyName == nameof(IsRegressionMode))
                 {
-                    ((IProgress<int>)progress).Report(i);
-                    await Task.Delay(1, _cts.Token);
+                    OnPropertyChanged(nameof(InputPlaceholder));
+                    UpdateCanCompute();
                 }
-                return estimation;
-            }, _cts.Token);
+            };
+            UpdateCanCompute();
+        }
 
-            _allData = _dataset.Values.ToList();
-            _processedData = estimator.ProcessedValues.ToList();
-            _mean = result.result;
+        partial void OnIsRegressionModeChanged(bool _) =>
+            ComputeCommand.NotifyCanExecuteChanged();
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
+        private void UpdateCanCompute()
+        {
+            CanCompute = IsRegressionMode
+                ? _dataset.Points.Any()
+                : _dataset.Values.Any();
+        }
+
+        private async Task ComputeAsync()
+        {
+            if (!CanCompute) return;
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            Result = "Calculating...";
+            ProcessedData = "";
+            CovarianceMatrix = "";
+            Progress = 0;
+            _mainVM.Progress = 0;
+            var prog = new Progress<int>(p =>
             {
-                Result = $"Result: {result.result:F2} (Time: {result.duration.TotalMilliseconds} ms)";
-                ProcessedDataset = $"Processed dataset: [{string.Join(", ", estimator.ProcessedValues.Take(100).Select(x => x.ToString("F3")))}]";
-                CovarianceMatrix = $"Covariance matrix: {estimator.CovarianceMatrix[0, 0].ToString("F4", CultureInfo.InvariantCulture)}";
-                _mainViewModel.IsGraphAvailable = true;
+                Progress = p;
+                _mainVM.Progress = p;
             });
+
+            if (IsRegressionMode)
+            {
+                // —— Huber regression via IRLS ——
+                var reg = new HuberRegressionEstimator(TuningConstant);
+                var res = await reg.FitAsync(_dataset.Points, prog, _cts.Token);
+
+                _pts = _dataset.Points.ToList();
+                _slope = res.Slope;
+                _intercept = res.Intercept;
+                LastRegressionResult = res;
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Result =
+                        $"y = {_slope:F2}x + {_intercept:F2}  " +
+                        $"(R² = {res.RSquared:F3}, Median squared residual: {res.MedianSquaredResidual:F2}, Time: {res.Elapsed.TotalMilliseconds:F0} ms)";
+                    ProcessedData = "–";
+                    covarianceMatrix = FormatMatrix(new[,] { { res.MedianSquaredResidual } });
+                    _mainVM.IsGraphAvailable = true;
+                });
+            }
+            else
+            {
+                // —— Simple Huber M‑estimate ——
+                var est = new HuberEstimator(TuningConstant);
+                var (mean, duration) = await est.ComputeWithTimingAsync(_dataset, prog, _cts.Token);
+
+                _orig = _dataset.Values.ToList();
+                _adj = est.ProcessedValues.ToList();
+                _mean = mean;
+                LastRegressionResult = null;
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Result =
+                        $"Result: {_mean:F2}  (Time: {duration.TotalMilliseconds:F0} ms)";
+                    ProcessedData = $"[ {string.Join(", ", _adj.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))} ]";
+                    covarianceMatrix = FormatMatrix(est.CovarianceMatrix);
+                    _mainVM.IsGraphAvailable = true;
+                });
+            }
         }
-        catch (OperationCanceledException)
+
+        public IEnumerable<Series> GetSeries()
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
+            if (IsRegressionMode)
+            {
+                var ptsSeries = new ScatterSeries
+                {
+                    Title = "Data Points",
+                    MarkerType = MarkerType.Circle
+                };
+                foreach (var p in _pts)
+                    ptsSeries.Points.Add(new ScatterPoint(p.x, p.y));
+
+                var line = new LineSeries
+                {
+                    Title = "Huber Regression",
+                    Color = OxyColors.Red
+                };
+                if (_pts.Any())
+                {
+                    var xs = _pts.Select(p => p.x);
+                    double xmin = xs.Min(), xmax = xs.Max();
+                    line.Points.Add(new DataPoint(xmin, _slope * xmin + _intercept));
+                    line.Points.Add(new DataPoint(xmax, _slope * xmax + _intercept));
+                }
+
+                return new Series[] { ptsSeries, line };
+            }
+            else
+            {
+                var origSeries = new LineSeries
+                {
+                    Title = "Original",
+                    Color = OxyColors.Gray
+                };
+                for (int i = 0; i < _orig.Count; i++)
+                    origSeries.Points.Add(new DataPoint(i, _orig[i]));
+
+                var adjSeries = new LineSeries
+                {
+                    Title = "Adjusted",
+                    Color = OxyColors.SteelBlue
+                };
+                for (int i = 0; i < _adj.Count; i++)
+                    adjSeries.Points.Add(new DataPoint(i, _adj[i]));
+
+                return new Series[] { origSeries, adjSeries };
+            }
         }
-        catch (Exception ex)
+
+        public IEnumerable<Annotation> GetAnnotations()
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
+            if (IsRegressionMode)
+                return Enumerable.Empty<Annotation>();
+
+            return new[]
+            {
+                new LineAnnotation
+                {
+                    Type                     = LineAnnotationType.Horizontal,
+                    Y                        = _mean,
+                    Color                    = OxyColors.Red,
+                    Text                     = $"Huber Mean = {_mean:F2}",
+                    TextHorizontalAlignment  = HorizontalAlignment.Left,
+                    TextVerticalAlignment    = VerticalAlignment.Top,
+                    TextMargin               = 4
+                }
+            };
         }
+
+        public string GetGraphTitle() =>
+            IsRegressionMode ? "Huber Regression" : "Huber M‑Estimate";
+
+        public double? GetHorizontalLineValue() =>
+            IsRegressionMode ? null : (double?)_mean;
+
+        public string? GetLineLabel() =>
+            IsRegressionMode ? null : $"Mean = {_mean:F2}";
     }
-
-    public IEnumerable<Series> GetSeries()
-    {
-        var originalSeries = new LineSeries
-        {
-            Title = "Original",
-            Color = OxyColors.Gray
-        };
-
-        for (int i = 0; i < _allData.Count; i++)
-            originalSeries.Points.Add(new DataPoint(i, _allData[i]));
-
-        var processedSeries = new LineSeries
-        {
-            Title = "Huber Adjusted",
-            Color = OxyColors.SteelBlue
-        };
-
-        for (int i = 0; i < _processedData.Count; i++)
-            processedSeries.Points.Add(new DataPoint(i, _processedData[i]));
-
-        return new[] { originalSeries, processedSeries };
-    }
-
-    public double? GetHorizontalLineValue() => _mean;
-    public string? GetLineLabel() => $"Huber = {_mean:F2}";
-    public IEnumerable<Annotation> GetAnnotations() => Enumerable.Empty<Annotation>();
-    public string GetGraphTitle() => "Huber Estimator Plot";
 }

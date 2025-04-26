@@ -10,11 +10,11 @@ public class WindowService : IWindowService
         if (viewModel is not IGraphable graphable)
             return;
 
-        var graphWindow = new GraphWindow
-        {
-            DataContext = new GraphWindowViewModel(graphable)
-        };
-
+        // создаём окно
+        var graphWindow = new GraphWindow();
+        // передаём и IGraphable, и само окно в VM
+        var vm = new GraphWindowViewModel(graphable);
+        graphWindow.DataContext = vm;
         graphWindow.Show();
     }
 

@@ -6,30 +6,53 @@ using System.Threading.Tasks;
 
 namespace RobustEstimation.Models
 {
+    /// <summary>
+    /// Computes the Theil–Sen slope estimator over a simple sequence of values,
+    /// treating the index as the x‑coordinate and the value as y‑coordinate.
+    /// </summary>
     public class TheilSenEstimator : RobustEstimatorBase
     {
+        /// <summary>
+        /// All pairwise slopes computed during the last call.
+        /// </summary>
         public List<double> ProcessedSlopes { get; private set; } = new();
 
+        /// <inheritdoc/>
         protected override async Task<double> ComputeAsync(Dataset data, IProgress<int> progress = null, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
             {
-                var slopes = new List<double>();
-                int count = data.Values.Count;
-                int processed = 0, total = count * (count - 1) / 2;
+                // Copy to array for faster access
+                var values = data.Values.ToArray();
+                int n = values.Length;
+                if (n < 2)
+                    throw new InvalidOperationException("At least two values are required to compute Theil–Sen estimator.");
 
-                for (int i = 0; i < count - 1; i++)
+                int total = n * (n - 1) / 2;
+                int done = 0;
+                var slopes = new List<double>(total);
+
+                // Compute all pairwise slopes: (y_j - y_i) / (j - i)
+                for (int i = 0; i < n - 1; i++)
                 {
-                    for (int j = i + 1; j < count; j++)
+                    for (int j = i + 1; j < n; j++)
                     {
-                        if (cancellationToken.IsCancellationRequested) throw new OperationCanceledException();
-                        slopes.Add((data.Values[j] - data.Values[i]) / (j - i));
-                        processed++;
-                        progress?.Report((processed * 100) / total);
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        double slope = (values[j] - values[i]) / (j - i);
+                        slopes.Add(slope);
+
+                        // report progress in percent
+                        progress?.Report(++done * 100 / total);
                     }
                 }
+
+                // Sort and remember
                 slopes.Sort();
-                ProcessedSlopes = slopes; // Сохраняем наклоны
+                ProcessedSlopes.Clear();
+                ProcessedSlopes.AddRange(slopes);
+
+                // Return the median slope
                 return slopes[slopes.Count / 2];
             }, cancellationToken);
         }

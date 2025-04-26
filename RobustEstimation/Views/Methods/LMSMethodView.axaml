@@ -15,12 +15,13 @@
 
 		<TextBlock Text="LMS Estimator" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
 		<TextBlock Text="Description: Least Median of Squares (LMS) is a robust regression estimator that minimizes the median of squared residuals." Grid.Row="1"/>
-
-		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="2">
-			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+		<StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="2">
+			<CheckBox Content="Regression mode"
+					  IsChecked="{Binding IsRegressionMode, Mode=TwoWay}"/>
 		</StackPanel>
 
-		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
+		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="3">
+			<Button Content="Compute" Command="{Binding ComputeCommand}" IsEnabled="{Binding CanCompute}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 			<TextBlock Text="{Binding ProcessedErrors}" FontSize="12"/>
 			<TextBlock Text="{Binding CovarianceMatrix}" FontSize="12"/>

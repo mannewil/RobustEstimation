@@ -12,20 +12,23 @@
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
+		<StackPanel Orientation="Vertical" Spacing="8" Grid.Row="0">
+		<TextBlock Text="Huber Estimator" FontSize="18" FontWeight="Bold"/>
+		<TextBlock Text="Description: This method computes the Huber M-estimator, which reduces the influence of outliers."/>		
+			<CheckBox Content="Regression mode"
+					  IsChecked="{Binding IsRegressionMode, Mode=TwoWay}"/>
+		</StackPanel>
 
-		<TextBlock Text="Huber Estimator" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
-		<TextBlock Text="Description: This method computes the Huber M-estimator, which reduces the influence of outliers." Grid.Row="1"/>
-
-		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="2">
+		<StackPanel Orientation="Vertical" Spacing="8" Grid.Row="1">
 			<TextBlock Text="Tuning constant (c):"/>
 			<Slider Minimum="1.0" Maximum="5.0" Value="{Binding TuningConstant, Mode=TwoWay}" TickFrequency="0.005" IsSnapToTickEnabled="True"/>
 			<TextBlock Text="{Binding TuningConstant, StringFormat='{}{0:F3}'}"/>
 		</StackPanel>
 	
-		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
-			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="2">
+			<Button Content="Compute" Command="{Binding ComputeCommand}" IsEnabled="{Binding CanCompute}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
-			<TextBlock Text="{Binding ProcessedDataset}" FontSize="12"/>
+			<TextBlock Text="{Binding ProcessedData}" FontSize="12"/>
 			<TextBlock Text="{Binding CovarianceMatrix}" FontSize="12"/>
 		</StackPanel>
 		

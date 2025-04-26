@@ -1,16 +1,82 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:resm="clr-namespace:RobustEstimation.Resources;assembly=RobustEstimation"
+			 xmlns:loc="clr-namespace:RobustEstimation.Properties;assembly=RobustEstimation"			 
              x:Class="RobustEstimation.App"
              xmlns:local="using:RobustEstimation"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Light">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
+
+	<Application.Resources>
+		<SolidColorBrush x:Key="BaseBackgroundBrush" Color="#F5F5F5"/>
+		<SolidColorBrush x:Key="BaseForegroundBrush" Color="#333333"/>
+		<SolidColorBrush x:Key="AccentColorBrush"   Color="#0066CC"/>
+		<SolidColorBrush x:Key="ControlBorderBrush" Color="#CCCCCC"/>
+		<loc:MethodTypeToStringConverter x:Key="MethodTypeToString"/>
+		<loc:LanguageToStringConverter   x:Key="LanguageToString"/>
+	</Application.Resources>
   
     <Application.Styles>
         <FluentTheme />
 		<StyleInclude Source="avares://OxyPlot.AvaloniaCore/Themes/Default.axaml"/>
+
+		<Style Selector="Window">
+			<Setter Property="Background" Value="{StaticResource BaseBackgroundBrush}"/>
+			<Setter Property="Foreground" Value="{StaticResource BaseForegroundBrush}"/>
+		</Style>
+
+		<Style Selector="Button">
+			<Setter Property="Background" Value="{StaticResource AccentColorBrush}"/>
+			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Padding" Value="8,4"/>
+			<Setter Property="CornerRadius" Value="4"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Margin" Value="4"/>
+		</Style>
+
+		<Style Selector="TextBox">
+			<Setter Property="Background"      Value="White"/>
+			<Setter Property="Foreground"      Value="{StaticResource BaseForegroundBrush}"/>
+			<Setter Property="BorderBrush"     Value="{StaticResource ControlBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="Padding"         Value="6"/>
+			<Setter Property="Margin"          Value="4"/>
+		</Style>
+
+		<Style Selector="ComboBox">
+			<Setter Property="Background"      Value="White"/>
+			<Setter Property="Foreground"      Value="{StaticResource BaseForegroundBrush}"/>
+			<Setter Property="BorderBrush"     Value="{StaticResource ControlBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="Padding"         Value="6"/>
+			<Setter Property="Margin"          Value="4"/>
+		</Style>
+
+		<Style Selector="ProgressBar">
+			<Setter Property="Background"      Value="#E0E0E0"/>
+			<Setter Property="Foreground"      Value="{StaticResource AccentColorBrush}"/>
+			<Setter Property="Height"          Value="8"/>
+			<Setter Property="CornerRadius"    Value="4"/>
+			<Setter Property="Margin"          Value="4,2"/>
+		</Style>
+
+		<!-- Разделяем на два Style, чтобы не попадало в Control -->
+		<Style Selector="TextBlock">
+			<Setter Property="Foreground" Value="{StaticResource BaseForegroundBrush}"/>
+			<Setter Property="FontSize"   Value="14"/>
+			<Setter Property="Margin"     Value="2"/>
+		</Style>
+
+		<Style Selector="Label">
+			<Setter Property="Foreground" Value="{StaticResource BaseForegroundBrush}"/>
+			<Setter Property="FontSize"   Value="14"/>
+			<Setter Property="Margin"     Value="2"/>
+		</Style>
+		
     </Application.Styles>
 </Application>

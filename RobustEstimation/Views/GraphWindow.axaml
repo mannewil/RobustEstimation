@@ -6,8 +6,11 @@
         x:DataType="vm:GraphWindowViewModel"	
         Title="Graph" Width="600" Height="400">
 
-	<Grid RowDefinitions="*">
-		<oxy:PlotView Model="{Binding PlotModel}" Grid.Row="0"/>
-	</Grid>
+	<DockPanel>
+		<Menu DockPanel.Dock="Top">
+			<MenuItem Header="Save as PNG" Command="{Binding SaveImageCommand}" />
+		</Menu>
+		<oxy:PlotView Model="{Binding PlotModel}" />
+	</DockPanel>
 	
 </Window>

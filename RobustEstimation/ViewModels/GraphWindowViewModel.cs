@@ -1,71 +1,98 @@
-﻿using OxyPlot;
-using OxyPlot.Annotations;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
+using OxyPlot;
+using OxyPlot.Axes;
+using OxyPlot.Avalonia;
 using OxyPlot.Series;
+using OxyPlot.Annotations;
 using CommunityToolkit.Mvvm.ComponentModel;
-using System;
+using LinearAxis = OxyPlot.Axes.LinearAxis;
 
-namespace RobustEstimation.ViewModels;
-
-public partial class GraphWindowViewModel : ViewModelBase
+namespace RobustEstimation.ViewModels
 {
-    [ObservableProperty]
-    private PlotModel plotModel;
-
-    public GraphWindowViewModel(IGraphable graphable)
+    public partial class GraphWindowViewModel : ViewModelBase
     {
-        var model = new PlotModel
-        {
-            Title = graphable.GetGraphTitle(),
-            TextColor = OxyColors.White,
-            PlotAreaBorderColor = OxyColors.White,
-            TitleColor = OxyColors.White,
-            Background = OxyColors.Black,
-            // Увеличенные отступы, чтобы надписи не обрезались
-            PlotMargins = new OxyThickness(60, 10, 100, 50)
-        };
+        private readonly Window _owner;
+        private readonly PlotModel _model;
 
-        // Добавление серий
-        foreach (var series in graphable.GetSeries())
-        {
-            if (series is ScatterSeries scatter && scatter.MarkerFill.IsInvisible())
-                scatter.MarkerFill = OxyColors.LightGreen;
+        [ObservableProperty] private PlotModel plotModel;
+        public IRelayCommand SaveImageCommand { get; }
 
-            model.Series.Add(series);
-        }
+        public GraphWindowViewModel(IGraphable graphable)
+        {            
 
-        // Добавление горизонтальной линии, если есть значение
-        if (graphable.GetHorizontalLineValue() is double y)
-        {
-            var line = new LineAnnotation
+            // --- Построение модели ---
+            _model = new PlotModel
             {
-                Type = LineAnnotationType.Horizontal,
-                Y = y,
-                Color = OxyColors.Red,
-                LineStyle = LineStyle.Solid,
-                StrokeThickness = 2,
-                Text = graphable.GetLineLabel() ?? "",
-                TextHorizontalAlignment = HorizontalAlignment.Right,
-                TextVerticalAlignment = VerticalAlignment.Top,
-                TextMargin = 10,
-                TextColor = OxyColors.White
+                Title = graphable.GetGraphTitle(),
+                Background = OxyColors.White,
+                PlotAreaBackground = OxyColors.White,
+                TextColor = OxyColors.Black,
+                TitleColor = OxyColors.Black,
+                PlotAreaBorderColor = OxyColors.Gray,
             };
 
-            model.Annotations.Add(line);
-        }
-
-        // Добавление дополнительных аннотаций (если есть)
-        foreach (var annotation in graphable.GetAnnotations())
-        {
-            if (annotation is LineAnnotation line)
+            // Оси
+            _model.Axes.Add(new LinearAxis
             {
-                line.TextColor = OxyColors.White;
-                line.Color = OxyColors.Red;
-            }
+                Position = AxisPosition.Bottom,
+                Title = "X",
+                TextColor = OxyColors.Black,
+                TitleColor = OxyColors.Black,
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColors.LightGray
+            });
+            _model.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                Title = "Y",
+                TextColor = OxyColors.Black,
+                TitleColor = OxyColors.Black,
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColors.LightGray
+            });
 
-            model.Annotations.Add(annotation);
+            // Серии и аннотации
+            foreach (var s in graphable.GetSeries())
+                _model.Series.Add(s);
+            foreach (var a in graphable.GetAnnotations())
+                _model.Annotations.Add(a);
+
+            PlotModel = _model;
+
+            // Команда сохранения через SaveFileDialog
+            SaveImageCommand = new RelayCommand(async () => await SaveImageAsync());
         }
 
-        PlotModel = model;
-        OnPropertyChanged(nameof(PlotModel));
+        private async Task SaveImageAsync()
+        {
+            // 1) Создаём и настраиваем SaveFileDialog
+            var dlg = new SaveFileDialog
+            {
+                Title = "Save chart as PNG",
+                DefaultExtension = "png",
+                InitialFileName = "chart.png",
+                Filters = { new FileDialogFilter { Name = "PNG Image", Extensions = { "png" } } }
+            };
+
+            // 2) Показываем диалог и ждём путь
+            var path = await dlg.ShowAsync(new Window());
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            // 3) Экспорт в PNG
+            using var stream = File.Create(path);
+            var exporter = new PngExporter
+            {
+                Width = 800,
+                Height = 600,
+                Background = OxyColors.White
+            };
+            exporter.Export(_model, stream);
+        }
     }
 }

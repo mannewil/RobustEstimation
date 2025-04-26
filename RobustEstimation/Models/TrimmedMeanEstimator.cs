@@ -1,8 +1,10 @@
-﻿using System;
+﻿// RobustEstimation.Models/TrimmedMeanEstimator.cs
+
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace RobustEstimation.Models
 {
@@ -32,38 +34,35 @@ namespace RobustEstimation.Models
         {
             return await Task.Run(() =>
             {
-                if (data.Values == null || data.Values.Count == 0)
-                    throw new ArgumentException("Dataset cannot be empty.");
+                var sorted = data.Values.OrderBy(v => v).ToList();
+                int trimCount = (int)(sorted.Count * TrimPercentage);
+                ProcessedData = sorted
+                    .Skip(trimCount)
+                    .Take(sorted.Count - 2 * trimCount)
+                    .ToList();
 
-                var sortedValues = data.Values.ToList();
-                sortedValues.Sort();
+                double mean = ProcessedData.Average();
 
-                int trimCount = (int)Math.Round(sortedValues.Count * TrimPercentage); // Округляем правильно
-                ProcessedData = sortedValues.Skip(trimCount).Take(sortedValues.Count - 2 * trimCount).ToList();
-
-                double trimmedMean = ProcessedData.Average();
-                Console.WriteLine($"Trimmed Mean: {trimmedMean}");
-
-                ComputeCovarianceMatrix(ProcessedData, trimmedMean);
+                ComputeCovarianceMatrix(ProcessedData, mean);
                 progress?.Report(100);
-                return trimmedMean;
+                return mean;
             }, cancellationToken);
         }
 
-        private void ComputeCovarianceMatrix(List<double> data, double trimmedMean)
+        private void ComputeCovarianceMatrix(List<double> data, double mean)
         {
-            double varianceSum = 0;
-            int count = data.Count;
-
-            foreach (var value in data)
+            int n = data.Count;
+            if (n < 2)
             {
-                double deviation = value - trimmedMean;
-                varianceSum += deviation * deviation;
+                CovarianceMatrix = new double[,] { { 0 } };
+                return;
             }
 
-            double variance = count > 1 ? varianceSum / (count - 1) : 0; // Несмещённая оценка дисперсии
+            // Несмещённая оценка дисперсии
+            double sumSq = data.Sum(v => Math.Pow(v - mean, 2));
+            double variance = sumSq / (n - 1);
+
             CovarianceMatrix = new double[,] { { variance } };
-            Console.WriteLine($"Covariance Matrix: {variance}");
         }
     }
 }

@@ -5,31 +5,30 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RobustEstimation.Models;
 using RobustEstimation.ViewModels.Methods;
+using RobustEstimation.Models.Regression;
+using RobustEstimation.Properties;
+using HarfBuzzSharp;
 
 namespace RobustEstimation.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    public ObservableCollection<string> Methods { get; } = new()
-    {
-        "Median", "Huber", "Trimmed Mean", "Theil-Sen", "LMS"
-    };
+    public ObservableCollection<MethodType> Methods { get; } = new ObservableCollection<MethodType>(Enum.GetValues<MethodType>());
 
-    public ObservableCollection<string> Languages { get; } = new()
-    {
-        "English", "Czech", "Russian"
-    };
+    public ObservableCollection<AppLanguage> Languages { get; } = new ObservableCollection<AppLanguage>(Enum.GetValues<AppLanguage>());
 
     [ObservableProperty]
-    private string selectedMethod;
+    private MethodType selectedMethod;
 
     [ObservableProperty]
-    private string selectedLanguage;
+    private AppLanguage selectedLanguage;
 
     [ObservableProperty]
     private bool isGraphAvailable;
@@ -47,6 +46,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string executionTime;
 
     [ObservableProperty]
+    private string inputPlaceholder;
+
+    [ObservableProperty]
     private ViewModelBase currentMethodViewModel;
 
     [ObservableProperty]
@@ -59,8 +61,16 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Dataset = new Dataset();
         _windowService = windowService;
-        SelectedMethod = Methods[0];
-        SelectedLanguage = Languages[0];
+        SelectedMethod = MethodType.Median;
+        var two = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        SelectedLanguage = two switch
+        {
+            "cs" => AppLanguage.Czech,
+            "ru" => AppLanguage.Russian,
+            _ => AppLanguage.English
+        };
+        InputPlaceholder = "Number format: 1, 2, 3, 4…";
+        UpdateMethodView();
     }
 
     [RelayCommand]
@@ -68,18 +78,32 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var dialog = new OpenFileDialog();
         var result = await dialog.ShowAsync(new Window());
-
         if (result?.Length > 0)
         {
-            var loadedDataset = await FileManager.LoadFromFileAsync(result[0]);
-            InputNumbers = string.Join(", ", loadedDataset.Values);
+            var loaded = await FileManager.LoadFromFileAsync(result[0]);
+            if (loaded.Points.Count > 0)
+            {
+                Dataset.SetPoints(loaded.Points);
+                InputPlaceholder = "Pair format: x,y; x2,y2; …";
+                InputNumbers = string.Join(";", loaded.Points.Select(p =>
+                    $"{p.X.ToString(CultureInfo.InvariantCulture)},{p.Y.ToString(CultureInfo.InvariantCulture)}"));
+                UpdateDataset();
+            }
+            else
+            {
+                Dataset.SetValues(loaded.Values);
+                InputPlaceholder = "Number format: 1, 2, 3, …";
+                InputNumbers = string.Join(", ", loaded.Values);
+                UpdateDataset();
+            }
         }
     }
 
     [RelayCommand]
     private async Task SaveFileAsync()
     {
-        if (Dataset == null || Dataset.Values.Count == 0)
+        if (Dataset == null
+            || (Dataset.Values.Count == 0 && Dataset.Points.Count == 0))
             return;
 
         var dialog = new SaveFileDialog
@@ -88,26 +112,34 @@ public partial class MainWindowViewModel : ViewModelBase
             InitialFileName = $"{SelectedMethod}_out.txt",
             Filters = { new FileDialogFilter { Name = "Text files", Extensions = { "txt" } } }
         };
-
-        var result = await dialog.ShowAsync(new Window());
-        if (string.IsNullOrEmpty(result))
+        var path = await dialog.ShowAsync(new Window());
+        if (string.IsNullOrEmpty(path))
             return;
 
-        var (methodParameter, methodProcessedDataset, computedResult, covarianceMatrixText) = GetMethodDetails();
-        methodProcessedDataset += $"\n\n{covarianceMatrixText}";
+        var (methodParameter, processedData, computedResult, covarianceText, regression) = GetMethodDetails();
 
-        await FileManager.SaveToFileAsync(Dataset, result, SelectedMethod, methodParameter, methodProcessedDataset, computedResult);
+        // подставляем матрицу, если она есть
+        if (!string.IsNullOrEmpty(covarianceText))
+            processedData += "\n\nCovariance matrix: " + covarianceText;
+
+        await FileManager.SaveToFileAsync(
+            dataset: Dataset,
+            path: path,
+            selectedMethod: SelectedMethod,
+            methodParameter: methodParameter,
+            methodProcessedData: processedData,
+            computedResult: computedResult,
+            regression: regression  // сюда уйдёт либо null, либо ваш RegressionResult
+        );
     }
 
     [RelayCommand]
     private async Task ComputeAsync()
     {
-        if (Dataset == null || Dataset.Values.Count == 0)
-        {
-            UpdateDataset();
-        }
+        UpdateDataset();
 
-        if (Dataset.Values.Count == 0) return;
+        if ((Dataset.Values.Count == 0 && Dataset.Points.Count == 0))
+            return;
 
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
@@ -119,11 +151,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
         RobustEstimatorBase estimator = SelectedMethod switch
         {
-            "Median" => new MedianEstimator(),
-            "Huber" => new HuberEstimator(),
-            "Trimmed Mean" => new TrimmedMeanEstimator(),
-            "Theil-Sen" => new TheilSenEstimator(),
-            "LMS" => new LMSEstimator(),
+            MethodType.Median => new MedianEstimator(),
+            MethodType.Huber => new HuberEstimator(),
+            MethodType.TrimmedMean => new TrimmedMeanEstimator(),
+            MethodType.TheilSen => new TheilSenEstimator(),
+            MethodType.LMS => new LMSEstimator(),
             _ => null
         };
 
@@ -159,11 +191,45 @@ public partial class MainWindowViewModel : ViewModelBase
         _windowService.ShowGraphWindow(CurrentMethodViewModel);
     }
 
-    partial void OnSelectedMethodChanged(string value)
+    partial void OnSelectedMethodChanged(MethodType newMethod)
     {
         UpdateMethodView();
         IsGraphAvailable = false;
+        InputPlaceholder = SelectedMethod switch
+        {
+            MethodType.TheilSen or MethodType.LMS or MethodType.Huber
+              => Resources.Placeholder_PairFormat,
+            _ => Resources.Placeholder_NumberFormat
+        };
     }
+
+    partial void OnSelectedLanguageChanged(AppLanguage old, AppLanguage @new)
+    {
+        // 1) Устанавливаем новую культуру
+        var ci = @new switch
+        {
+            AppLanguage.Czech => new CultureInfo("cs-CZ"),
+            AppLanguage.Russian => new CultureInfo("ru-RU"),
+            _ => new CultureInfo("en-US"),
+        };
+        Thread.CurrentThread.CurrentUICulture = ci;
+        Thread.CurrentThread.CurrentCulture = ci;
+
+        // 2) Пропатчим коллекции, чтобы ComboBox перебрал ItemTemplate заново
+        var methodsBackup = Methods.ToArray();
+        Methods.Clear();
+        foreach (var m in methodsBackup) Methods.Add(m);
+
+        var langsBackup = Languages.ToArray();
+        Languages.Clear();
+        foreach (var l in langsBackup) Languages.Add(l);
+
+        OnPropertyChanged(nameof(InputPlaceholder));
+        OnPropertyChanged(nameof(Methods));
+        OnPropertyChanged(nameof(Languages));
+        SelectedMethod = SelectedMethod; // триггерим OnSelectedMethodChanged
+    }
+
 
     partial void OnInputNumbersChanged(string value)
     {
@@ -174,11 +240,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         CurrentMethodViewModel = SelectedMethod switch
         {
-            "Median" => new MedianMethodViewModel(Dataset, this),
-            "Huber" => new HuberMethodViewModel(Dataset, this),
-            "Trimmed Mean" => new TrimmedMeanMethodViewModel(Dataset, this),
-            "Theil-Sen" => new TheilSenMethodViewModel(Dataset, this),
-            "LMS" => new LMSMethodViewModel(Dataset, this),
+            MethodType.Median => new MedianMethodViewModel(Dataset, this),
+            MethodType.Huber => new HuberMethodViewModel(Dataset, this),
+            MethodType.TrimmedMean => new TrimmedMeanMethodViewModel(Dataset, this),
+            MethodType.TheilSen => new TheilSenMethodViewModel(Dataset, this),
+            MethodType.LMS => new LMSMethodViewModel(Dataset, this),
             _ => null
         };
     }
@@ -188,62 +254,92 @@ public partial class MainWindowViewModel : ViewModelBase
         if (Dataset == null)
             Dataset = new Dataset();
 
-        var values = InputNumbers?.Split(new[] { ' ', ',', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Select(s => double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var num) ? num : (double?)null)
-                                 .Where(n => n.HasValue)
-                                 .Select(n => n.Value)
-                                 .ToList() ?? new List<double>();
+        // Если у нас VM, который поддерживает переключение plain/regen mode...
+        if (CurrentMethodViewModel is TheilSenMethodViewModel theilVm && theilVm.IsRegressionMode
+         || CurrentMethodViewModel is LMSMethodViewModel lmsVm && lmsVm.IsRegressionMode
+         || CurrentMethodViewModel is HuberMethodViewModel huberVm && huberVm.IsRegressionMode)
+        {
+            // парный ввод: x,y; x2,y2; …
+            var pairs = InputNumbers?
+                .Split(new[] { ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p
+                    .Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                .Where(parts => parts.Length == 2
+                                && double.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out _)
+                                && double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out _))
+                .Select(parts => (
+                    X: double.Parse(parts[0], CultureInfo.InvariantCulture),
+                    Y: double.Parse(parts[1], CultureInfo.InvariantCulture)))
+                .ToList()
+                ?? new List<(double, double)>();
 
-        Dataset.SetValues(values);
+            Dataset.SetPoints(pairs);
+        }
+        else
+        {
+            // обычный одномерный ввод v1, v2, v3, …
+            var values = InputNumbers?
+                .Split(new[] { ' ', ',', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var num)
+                               ? num
+                               : (double?)null)
+                .Where(n => n.HasValue)
+                .Select(n => n.Value)
+                .ToList()
+                ?? new List<double>();
+
+            Dataset.SetValues(values);
+        }
     }
 
-    private (string methodParameter, string methodProcessedDataset, double computedResult, string covarianceMatrixText) GetMethodDetails()
+    private (string methodParameter,
+          string processedData,
+          string computedResult,
+          string covarianceText,
+          RegressionResult? regression) GetMethodDetails()
     {
-        string methodParameter = "", methodProcessedDataset = "", covarianceMatrixText = "";
-        double computedResult = double.NaN;
+        string methodParameter = "", processedData = "", covarianceText = "";
+        string computedResult = "";
+        RegressionResult? regression = null;
 
         switch (CurrentMethodViewModel)
         {
-            case TrimmedMeanMethodViewModel trimmedMeanVM:
-                methodParameter = $"Trim Fraction: {trimmedMeanVM.TrimPercentage * 100:F0}%";
-                methodProcessedDataset = string.Join(", ", trimmedMeanVM.ProcessedDataset);
-                computedResult = ParseResult(trimmedMeanVM.Result);
-                covarianceMatrixText = $"{trimmedMeanVM.CovarianceMatrix}";
-                break;
-
-            case HuberMethodViewModel huberVM:
-                methodParameter = $"Delta: {huberVM.TuningConstant}";
-                methodProcessedDataset = string.Join(", ", huberVM.ProcessedDataset);
-                computedResult = ParseResult(huberVM.Result);
-                covarianceMatrixText = $"{huberVM.CovarianceMatrix}";
-                break;
-
-            case LMSMethodViewModel lmsVM:
-                methodParameter = "LMS Estimator (default settings)";
-                methodProcessedDataset = string.Join(", ", lmsVM.ProcessedErrors);
-                computedResult = ParseResult(lmsVM.Result);
-                covarianceMatrixText = $"{lmsVM.CovarianceMatrix}";
-                break;
-
-            case TheilSenMethodViewModel theilSenVM:
-                methodParameter = "Theil-Sen Estimator";
-                methodProcessedDataset = string.Join(", ", theilSenVM.ProcessedSlopes);
-                computedResult = ParseResult(theilSenVM.Result);
-                break;
-
-            case MedianMethodViewModel medianVM:
+            case MedianMethodViewModel md:
                 methodParameter = "Median Estimator";
-                computedResult = ParseResult(medianVM.Result);
+                computedResult = md.Result;
+                break;
+
+            case TrimmedMeanMethodViewModel tm:
+                methodParameter = $"Trim Fraction: {tm.TrimPercentage * 100:F0}%";
+                processedData = string.Join(", ", tm.ProcessedData);
+                computedResult = tm.Result;
+                covarianceText = tm.CovarianceMatrix;
+                break;
+
+            case HuberMethodViewModel hub:
+                methodParameter = $"Delta: {hub.TuningConstant}";
+                processedData = string.Join(", ", hub.ProcessedData);
+                computedResult = hub.Result;
+                covarianceText = hub.CovarianceMatrix;
+                regression = hub.LastRegressionResult;
+                break;
+
+            case TheilSenMethodViewModel th:
+                methodParameter = th.IsRegressionMode ? "Theil‑Sen Regression" : "Theil‑Sen Estimator";
+                processedData = string.Join(", ", th.ProcessedSlopes);
+                computedResult = th.Result;
+                if (th.IsRegressionMode) regression = th.LastRegressionResult;
+                break;
+
+            case LMSMethodViewModel lms:
+                methodParameter = lms.IsRegressionMode ? "LMS Regression" : "LMS Estimator";
+                processedData = string.Join(", ", lms.ProcessedErrors);
+                computedResult = lms.Result;
+                if (lms.IsRegressionMode) regression = lms.LastRegressionResult;
                 break;
         }
 
-        return (methodParameter, methodProcessedDataset, computedResult, covarianceMatrixText);
+        return (methodParameter, processedData, computedResult, covarianceText, regression);
     }
 
-    private double ParseResult(string resultText)
-    {
-        if (string.IsNullOrEmpty(resultText)) return double.NaN;
-        resultText = resultText.Replace("Result:", "").Trim().Replace(',', '.');
-        return double.TryParse(resultText, NumberStyles.Any, CultureInfo.InvariantCulture, out var res) ? res : double.NaN;
-    }
 }

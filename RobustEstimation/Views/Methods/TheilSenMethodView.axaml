@@ -14,10 +14,14 @@
 		</Grid.RowDefinitions>
 
 		<TextBlock Text="Theil-Sen Estimator" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
-		<TextBlock Text="Description: This method computes the Theil-Sen estimator, which is a robust method for estimating the slope of a regression line." Grid.Row="1"/>		
+		<TextBlock Text="Description: This method computes the Theil-Sen estimator, which is a robust method for estimating the slope of a regression line." Grid.Row="1"/>
+		<StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="2">
+			<CheckBox Content="Regression mode"
+					  IsChecked="{Binding IsRegressionMode, Mode=TwoWay}"/>
+		</StackPanel>
 
 		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
-			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+			<Button Content="Compute" Command="{Binding ComputeCommand}" IsEnabled="{Binding CanCompute}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 			<TextBlock Text="{Binding ProcessedSlopes}" FontSize="12"/>
 		</StackPanel>
