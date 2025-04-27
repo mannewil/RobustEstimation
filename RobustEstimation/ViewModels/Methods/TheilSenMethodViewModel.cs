@@ -18,7 +18,7 @@ namespace RobustEstimation.ViewModels.Methods;
 public partial class TheilSenMethodViewModel : ViewModelBase, IGraphable
 {
     private readonly Dataset _dataset;
-    private readonly MainWindowViewModel _mainViewModel;
+    private readonly MainWindowViewModel _mainVM;
     private CancellationTokenSource _cts;
     public RegressionResult LastRegressionResult { get; private set; }
 
@@ -27,7 +27,7 @@ public partial class TheilSenMethodViewModel : ViewModelBase, IGraphable
     private RegressionResult res;
 
     [ObservableProperty]
-    private string result = "Not computed";
+    private string result = "Zatím nevypočítáno";
 
     [ObservableProperty]
     private string processedSlopes = "";
@@ -43,15 +43,15 @@ public partial class TheilSenMethodViewModel : ViewModelBase, IGraphable
 
     public string InputPlaceholder =>
         IsRegressionMode
-            ? "Enter points as x,y; x2,y2; …"
-            : "Enter numbers as v1, v2, v3, …";
+            ? "Format čísel: x1,y1; x2,y2; ... nebo x1 y1; x2 y2; ..."
+            : "Format čísel: x1, x2, x3, x4... nebo x1 x2 x3 x4...";
 
     public IAsyncRelayCommand ComputeCommand { get; }
 
-    public TheilSenMethodViewModel(Dataset dataset, MainWindowViewModel mainViewModel)
+    public TheilSenMethodViewModel(Dataset dataset, MainWindowViewModel mainVM)
     {
         _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
-        _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
+        _mainVM = mainVM ?? throw new ArgumentNullException(nameof(mainVM));
 
         ComputeCommand = new AsyncRelayCommand(
             ComputeTheilSenAsync,
@@ -73,8 +73,8 @@ public partial class TheilSenMethodViewModel : ViewModelBase, IGraphable
 
     partial void OnIsRegressionModeChanged(bool _)
     {
-        OnPropertyChanged(nameof(InputPlaceholder));
-        UpdateCanCompute();
+        ComputeCommand.NotifyCanExecuteChanged();
+        _mainVM.InputPlaceholder = InputPlaceholder;
     }
 
     private void UpdateCanCompute()
@@ -92,15 +92,15 @@ public partial class TheilSenMethodViewModel : ViewModelBase, IGraphable
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
 
-        Result = "Calculating...";
+        Result = "Počíta se...";
         ProcessedSlopes = "";
         Progress = 0;
-        _mainViewModel.Progress = 0;
+        _mainVM.Progress = 0;
 
         var prog = new Progress<int>(p =>
         {
             Progress = p;
-            _mainViewModel.Progress = p;
+            _mainVM.Progress = p;
         });
 
         if (IsRegressionMode)
@@ -113,11 +113,11 @@ public partial class TheilSenMethodViewModel : ViewModelBase, IGraphable
             {
                 Result =
                     $"y = {res.Slope:F2}x + {res.Intercept:F2}  " +
-                    $"(R² = {res.RSquared:F3}), (med sq res: {res.MedianSquaredResidual:F2}, Time: {res.Elapsed.TotalMilliseconds:F0} ms)";
+                    $"(R² = {res.RSquared:F3}), (Medián čtvercových reziduí: {res.MedianSquaredResidual:F2}, Čás: {res.Elapsed.TotalMilliseconds:F0} ms)";
 
                 ProcessedSlopes =
-                    $"Slopes: [{string.Join(", ", reg.ProcessedSlopes.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))}]";
-                _mainViewModel.IsGraphAvailable = true;
+                    $"Svahy: [{string.Join(", ", reg.ProcessedSlopes.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))}]";
+                _mainVM.IsGraphAvailable = true;
             });
         }
         else
@@ -133,10 +133,10 @@ public partial class TheilSenMethodViewModel : ViewModelBase, IGraphable
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 Result =
-                    $"Median slope: {_medianSlope:F2} ({_medianSlopeDuration.TotalMilliseconds:F0} ms)";
+                    $"Medianové svahy: {_medianSlope:F2} ({_medianSlopeDuration.TotalMilliseconds:F0} ms)";
                 ProcessedSlopes =
-                    $"Slopes: [{string.Join(", ", est.ProcessedSlopes.Take(20))}…]";
-                _mainViewModel.IsGraphAvailable = true;
+                    $"Svahy: [{string.Join(", ", est.ProcessedSlopes.Take(20))}…]";
+                _mainVM.IsGraphAvailable = true;
             });
         }
     }

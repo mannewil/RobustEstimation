@@ -16,8 +16,6 @@
 		<SolidColorBrush x:Key="BaseForegroundBrush" Color="#333333"/>
 		<SolidColorBrush x:Key="AccentColorBrush"   Color="#0066CC"/>
 		<SolidColorBrush x:Key="ControlBorderBrush" Color="#CCCCCC"/>
-		<loc:MethodTypeToStringConverter x:Key="MethodTypeToString"/>
-		<loc:LanguageToStringConverter   x:Key="LanguageToString"/>
 	</Application.Resources>
   
     <Application.Styles>

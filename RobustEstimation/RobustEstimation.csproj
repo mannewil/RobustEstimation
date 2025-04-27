@@ -28,24 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <CustomToolNamespace>RobustEstimation.Properties</CustomToolNamespace>
-    </EmbeddedResource>
-	  <EmbeddedResource Update="Properties\Resources.cs-CZ.resx">
-		  <DependentUpon>Resources.resx</DependentUpon>
-	  </EmbeddedResource>
-	  <EmbeddedResource Update="Properties\Resources.ru-RU.resx">
-		  <DependentUpon>Resources.resx</DependentUpon>
-	  </EmbeddedResource>
+    <Folder Include="Properties\" />
   </ItemGroup>
 </Project>

@@ -17,7 +17,7 @@ public partial class MedianMethodViewModel : ViewModelBase
     private CancellationTokenSource _cts;
 
     [ObservableProperty]
-    private string result = "Not computed";
+    private string result = "Zatím nevypočítáno";
 
     [ObservableProperty]
     private double progress;
@@ -36,7 +36,7 @@ public partial class MedianMethodViewModel : ViewModelBase
     {
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
-        Result = "Calculating...";
+        Result = "Počíta se...";
         Progress = 0;
         _mainViewModel.Progress = 0;
 
@@ -51,7 +51,7 @@ public partial class MedianMethodViewModel : ViewModelBase
             var values = _dataset.Values.OrderBy(x => x).ToArray();
             int count = values.Length;
             if (count == 0)
-                throw new InvalidOperationException("No data available");
+                throw new InvalidOperationException("Data nenalezena!");
 
             double median = await Task.Run(() =>
             {
@@ -65,15 +65,15 @@ public partial class MedianMethodViewModel : ViewModelBase
                     : values[count / 2];
             }, _cts.Token);
 
-            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Result: {median:F2}");
+            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Výsledek: {median:F2}");
         }
         catch (OperationCanceledException)
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Result = "Calculation canceled.");
+            await Dispatcher.UIThread.InvokeAsync(() => Result = "Operace stornovaná.");
         }
         catch (Exception ex)
         {
-            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Error: {ex.Message}");
+            await Dispatcher.UIThread.InvokeAsync(() => Result = $"Chyba: {ex.Message}");
         }
     }
 }

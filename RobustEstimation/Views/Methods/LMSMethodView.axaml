@@ -13,15 +13,18 @@
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
-		<TextBlock Text="LMS Estimator" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
-		<TextBlock Text="Description: Least Median of Squares (LMS) is a robust regression estimator that minimizes the median of squared residuals." Grid.Row="1"/>
+		<TextBlock Text="LMS odhad" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
+		<TextBlock Grid.Row="1">
+			Nejmenší medián čtverců (LMS) je robustní regresní odhad, který minimalizuje medián čtvercových reziduí.<LineBreak/>
+			Zaškrtnutím políčka použijete skutečný regresní režim, který se doporučuje používat s grafem.
+		</TextBlock>
 		<StackPanel Orientation="Horizontal" Spacing="8" Grid.Row="2">
-			<CheckBox Content="Regression mode"
+			<CheckBox Content="Režim regrese"
 					  IsChecked="{Binding IsRegressionMode, Mode=TwoWay}"/>
 		</StackPanel>
 
 		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="3">
-			<Button Content="Compute" Command="{Binding ComputeCommand}" IsEnabled="{Binding CanCompute}"/>
+			<Button Content="Spustit" Command="{Binding ComputeCommand}" IsEnabled="{Binding CanCompute}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 			<TextBlock Text="{Binding ProcessedErrors}" FontSize="12"/>
 			<TextBlock Text="{Binding CovarianceMatrix}" FontSize="12"/>

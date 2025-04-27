@@ -5,24 +5,18 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RobustEstimation.Models;
 using RobustEstimation.ViewModels.Methods;
 using RobustEstimation.Models.Regression;
-using RobustEstimation.Properties;
-using HarfBuzzSharp;
 
 namespace RobustEstimation.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
     public ObservableCollection<MethodType> Methods { get; } = new ObservableCollection<MethodType>(Enum.GetValues<MethodType>());
-
-    public ObservableCollection<AppLanguage> Languages { get; } = new ObservableCollection<AppLanguage>(Enum.GetValues<AppLanguage>());
 
     [ObservableProperty]
     private MethodType selectedMethod;
@@ -61,16 +55,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Dataset = new Dataset();
         _windowService = windowService;
-        SelectedMethod = MethodType.Median;
-        var two = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-        SelectedLanguage = two switch
-        {
-            "cs" => AppLanguage.Czech,
-            "ru" => AppLanguage.Russian,
-            _ => AppLanguage.English
-        };
-        InputPlaceholder = "Number format: 1, 2, 3, 4…";
+        SelectedMethod = Methods[0];     
         UpdateMethodView();
+        inputPlaceholder = "Format čísel: x1, x2, x3, x4... nebo x1 x2 x3 x4...";
     }
 
     [RelayCommand]
@@ -195,42 +182,8 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         UpdateMethodView();
         IsGraphAvailable = false;
-        InputPlaceholder = SelectedMethod switch
-        {
-            MethodType.TheilSen or MethodType.LMS or MethodType.Huber
-              => Resources.Placeholder_PairFormat,
-            _ => Resources.Placeholder_NumberFormat
-        };
-    }
-
-    partial void OnSelectedLanguageChanged(AppLanguage old, AppLanguage @new)
-    {
-        // 1) Устанавливаем новую культуру
-        var ci = @new switch
-        {
-            AppLanguage.Czech => new CultureInfo("cs-CZ"),
-            AppLanguage.Russian => new CultureInfo("ru-RU"),
-            _ => new CultureInfo("en-US"),
-        };
-        Thread.CurrentThread.CurrentUICulture = ci;
-        Thread.CurrentThread.CurrentCulture = ci;
-
-        // 2) Пропатчим коллекции, чтобы ComboBox перебрал ItemTemplate заново
-        var methodsBackup = Methods.ToArray();
-        Methods.Clear();
-        foreach (var m in methodsBackup) Methods.Add(m);
-
-        var langsBackup = Languages.ToArray();
-        Languages.Clear();
-        foreach (var l in langsBackup) Languages.Add(l);
-
-        OnPropertyChanged(nameof(InputPlaceholder));
-        OnPropertyChanged(nameof(Methods));
-        OnPropertyChanged(nameof(Languages));
-        SelectedMethod = SelectedMethod; // триггерим OnSelectedMethodChanged
-    }
-
-
+        InputPlaceholder = "Format čísel: x1, x2, x3, x4... nebo x1 x2 x3 x4...";
+    }    
     partial void OnInputNumbersChanged(string value)
     {
         UpdateDataset();

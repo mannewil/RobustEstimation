@@ -7,9 +7,9 @@
              VerticalAlignment="Stretch">
 	<Grid>
 		<StackPanel Spacing="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-			<TextBlock Text="Median Estimator" FontSize="18" FontWeight="Bold"/>
-			<TextBlock Text="Description: This method computes the median of the dataset."/>
-			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+			<TextBlock Text="Mediánový odhad" FontSize="18" FontWeight="Bold"/>
+			<TextBlock Text="Tato metoda počíta medían čísel."/>
+			<Button Content="Spustit" Command="{Binding ComputeCommand}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 		</StackPanel>
 	</Grid>

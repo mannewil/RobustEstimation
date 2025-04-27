@@ -29,7 +29,7 @@ namespace RobustEstimation.ViewModels.Methods
         [ObservableProperty] 
         private double progress;
         [ObservableProperty] 
-        private string result = "Not computed";
+        private string result = "Zatím nevypočítáno";
         [ObservableProperty] 
         private string processedData = "";
         [ObservableProperty] 
@@ -49,7 +49,7 @@ namespace RobustEstimation.ViewModels.Methods
         {
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
-            Result = "Calculating...";
+            Result = "Počíta se...";
             ProcessedData = "";
             CovarianceMatrix = "";
             Progress = 0;
@@ -72,9 +72,9 @@ namespace RobustEstimation.ViewModels.Methods
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    Result = $"Result: {_mean:F2}  (Time: {duration.TotalMilliseconds:F0} ms)";
-                    ProcessedData = $"[ {string.Join(", ", _trimmed.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))} ]";
-                    CovarianceMatrix = FormatMatrix(est.CovarianceMatrix);
+                    Result = $"Výsledek: {_mean:F2}  (Čás: {duration.TotalMilliseconds:F0} ms)";
+                    ProcessedData = $"Trimovaná data: [ {string.Join(", ", _trimmed.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))} ]";
+                    //CovarianceMatrix = FormatMatrix(est.CovarianceMatrix);
                     _mainVM.IsGraphAvailable = true;
                 });
             }

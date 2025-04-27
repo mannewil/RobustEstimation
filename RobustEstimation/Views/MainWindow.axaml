@@ -6,7 +6,7 @@
   xmlns:loc="clr-namespace:RobustEstimation.Properties"
   x:Class="RobustEstimation.Views.MainWindow"
   x:DataType="vm:MainWindowViewModel"
-  Title="{loc:Loc Key=AppTitle}"
+  Title="Robustní Estimace"
   Width="900" Height="700">
 
 	<Grid>
@@ -20,20 +20,6 @@
 		<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
 			<ComboBox ItemsSource="{Binding Methods}"
 					  SelectedItem="{Binding SelectedMethod}">
-				<ComboBox.ItemTemplate>
-					<DataTemplate>
-						<TextBlock Text="{Binding Converter={StaticResource MethodTypeToString}}"/>
-					</DataTemplate>
-				</ComboBox.ItemTemplate>
-			</ComboBox>
-
-			<ComboBox ItemsSource="{Binding Languages}"
-					  SelectedItem="{Binding SelectedLanguage}">
-				<ComboBox.ItemTemplate>
-					<DataTemplate>
-						<TextBlock Text="{Binding Converter={StaticResource LanguageToString}}"/>
-					</DataTemplate>
-				</ComboBox.ItemTemplate>
 			</ComboBox>
 		</StackPanel>
 
@@ -51,7 +37,7 @@
 
 		<!-- Bottom bar: input, buttons, progress -->
 		<StackPanel Grid.Row="2" Orientation="Vertical" Spacing="10">
-			<TextBlock Text="{loc:Loc Key=Label_InputNumbers}" FontSize="14"/>
+			<TextBlock Text="Body odhadu" FontSize="14"/>
 			<TextBox
 			  Text="{Binding InputNumbers, UpdateSourceTrigger=PropertyChanged}"
 			  Watermark="{Binding InputPlaceholder}"
@@ -59,15 +45,15 @@
 			  Height="100"/>
 			<StackPanel Orientation="Horizontal" Spacing="10">
 				<Button
-				  Content="{loc:Loc Key=Button_LoadFile}"
+				  Content="Načíst soubor..."
 				  Width="150"				  
 				  Command="{Binding LoadFileCommand}"/>
 				<Button
-				  Content="{loc:Loc Key=Button_SaveResult}"
+				  Content="Uložit vysledek..."
 				  Width="170"
 				  Command="{Binding SaveFileCommand}"/>
 				<Button
-				  Content="{loc:Loc Key=Button_ShowGraph}"
+				  Content="Ukazát graf..."
 				  Width="150"
 				  Command="{Binding ShowGraphCommand}"
 				  IsEnabled="{Binding IsGraphAvailable}"/>

@@ -46,7 +46,7 @@ namespace RobustEstimation.ViewModels.Methods
         private double progress;
 
         [ObservableProperty]
-        private string result = "Not computed";
+        private string result = "Zatím nevypočítáno";
 
         [ObservableProperty]
         private string processedData = "";
@@ -57,8 +57,8 @@ namespace RobustEstimation.ViewModels.Methods
 
         public string InputPlaceholder =>
             IsRegressionMode
-                ? "Enter points as x,y; x2,y2; …"
-                : "Enter numbers as v1, v2, v3; …";
+                ? "Format čísel: x1,y1; x2,y2; ... nebo x1 y1; x2 y2; ..."
+                : "Format čísel: x1, x2, x3, x4... nebo x1 x2 x3 x4...";
 
         public HuberMethodViewModel(Dataset dataset, MainWindowViewModel mainVM)
         {
@@ -78,8 +78,12 @@ namespace RobustEstimation.ViewModels.Methods
             UpdateCanCompute();
         }
 
-        partial void OnIsRegressionModeChanged(bool _) =>
+        partial void OnIsRegressionModeChanged(bool _) 
+        { 
             ComputeCommand.NotifyCanExecuteChanged();
+            _mainVM.InputPlaceholder = InputPlaceholder;
+        }
+            
 
         private void UpdateCanCompute()
         {
@@ -94,7 +98,7 @@ namespace RobustEstimation.ViewModels.Methods
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
 
-            Result = "Calculating...";
+            Result = "Počíta se...";
             ProcessedData = "";
             CovarianceMatrix = "";
             Progress = 0;
@@ -120,9 +124,9 @@ namespace RobustEstimation.ViewModels.Methods
                 {
                     Result =
                         $"y = {_slope:F2}x + {_intercept:F2}  " +
-                        $"(R² = {res.RSquared:F3}, Median squared residual: {res.MedianSquaredResidual:F2}, Time: {res.Elapsed.TotalMilliseconds:F0} ms)";
-                    ProcessedData = "–";
-                    covarianceMatrix = FormatMatrix(new[,] { { res.MedianSquaredResidual } });
+                        $"(R² = {res.RSquared:F3}, Medián čtvercových reziduí: {res.MedianSquaredResidual:F2}, Čás: {res.Elapsed.TotalMilliseconds:F0} ms)";
+                    ProcessedData = "";
+                    //CovarianceMatrix = FormatMatrix(new[,] { { res.MedianSquaredResidual } });
                     _mainVM.IsGraphAvailable = true;
                 });
             }
@@ -141,8 +145,8 @@ namespace RobustEstimation.ViewModels.Methods
                 {
                     Result =
                         $"Result: {_mean:F2}  (Time: {duration.TotalMilliseconds:F0} ms)";
-                    ProcessedData = $"[ {string.Join(", ", _adj.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))} ]";
-                    covarianceMatrix = FormatMatrix(est.CovarianceMatrix);
+                    ProcessedData = $"Úpravená data: [ {string.Join(", ", _adj.Select(x => x.ToString("F2", CultureInfo.InvariantCulture)))} ]";
+                    //CovarianceMatrix = FormatMatrix(est.CovarianceMatrix);
                     _mainVM.IsGraphAvailable = true;
                 });
             }

@@ -13,17 +13,19 @@
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
-		<TextBlock Text="Trimmed Mean Estimator" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
-		<TextBlock Text="Description: This method computes the trimmed mean of the dataset." Grid.Row="1"/>
+		<TextBlock Text="Trimmed Mean odhad" FontSize="18" FontWeight="Bold" Grid.Row="0"/>
+		<TextBlock Grid.Row="1">
+			Tato metoda vypočítá oříznutý průměr souboru dat. <LineBreak/> Posouváním posuvníku ovládáte procento výřezu z obou stran datového souboru.
+		</TextBlock> 
 
 		<StackPanel Orientation="Vertical" Spacing="5" Grid.Row="2">
-			<TextBlock Text="Trim percentage:"/>
+			<TextBlock Text="Procento oříznutí :"/>
 			<Slider Minimum="0.05" Maximum="0.49" Value="{Binding TrimPercentage, Mode=TwoWay}" TickFrequency="0.01" IsSnapToTickEnabled="True"/>
 			<TextBlock Text="{Binding TrimPercentage, StringFormat='{}{0:P0}'}"/>
 		</StackPanel>
 		
 		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="3">
-			<Button Content="Compute" Command="{Binding ComputeCommand}"/>
+			<Button Content="Spustit" Command="{Binding ComputeCommand}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 			<TextBlock Text="{Binding ProcessedData}" FontSize="12"/>
 			<TextBlock Text="{Binding CovarianceMatrix}" FontSize="12"/>

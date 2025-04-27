@@ -13,20 +13,24 @@
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 		<StackPanel Orientation="Vertical" Spacing="8" Grid.Row="0">
-		<TextBlock Text="Huber Estimator" FontSize="18" FontWeight="Bold"/>
-		<TextBlock Text="Description: This method computes the Huber M-estimator, which reduces the influence of outliers."/>		
-			<CheckBox Content="Regression mode"
+		<TextBlock Text="Huberův M-odhad" FontSize="18" FontWeight="Bold"/>
+			<TextBlock Grid.Row="1">
+				Tato metoda počítá Huberův M-odhad, který snižuje vliv odlehlých hodnot.<LineBreak/>
+				Posouváním posuvníku měníte konstantu ladění metody.<LineBreak/>
+				Zaškrtnutím políčka použijete skutečný regresní režim, který se doporučuje používat s grafem.
+			</TextBlock>
+			<CheckBox Content="Režim regrese"
 					  IsChecked="{Binding IsRegressionMode, Mode=TwoWay}"/>
 		</StackPanel>
 
 		<StackPanel Orientation="Vertical" Spacing="8" Grid.Row="1">
-			<TextBlock Text="Tuning constant (c):"/>
+			<TextBlock Text="Konstanta ladění (c):"/>
 			<Slider Minimum="1.0" Maximum="5.0" Value="{Binding TuningConstant, Mode=TwoWay}" TickFrequency="0.005" IsSnapToTickEnabled="True"/>
 			<TextBlock Text="{Binding TuningConstant, StringFormat='{}{0:F3}'}"/>
 		</StackPanel>
 	
 		<StackPanel Orientation="Vertical" Spacing="1" Grid.Row="2">
-			<Button Content="Compute" Command="{Binding ComputeCommand}" IsEnabled="{Binding CanCompute}"/>
+			<Button Content="Spustit" Command="{Binding ComputeCommand}" IsEnabled="{Binding CanCompute}"/>
 			<TextBlock Text="{Binding Result}" FontSize="16"/>
 			<TextBlock Text="{Binding ProcessedData}" FontSize="12"/>
 			<TextBlock Text="{Binding CovarianceMatrix}" FontSize="12"/>

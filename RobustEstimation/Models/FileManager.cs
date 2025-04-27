@@ -106,20 +106,20 @@ public static class FileManager
         // --- Исходные данные ---
         if (dataset.Values.Count > 0)
         {
-            lines.Add("Original Values:");
+            lines.Add("Původní hodnoty:");
             lines.Add(string.Join(", ", dataset.Values.Select(v =>
                 v.ToString(CultureInfo.InvariantCulture))));
         }
         else if (dataset.Points.Count > 0)
         {
-            lines.Add("Original Points:");
+            lines.Add("Původní body:");
             lines.Add(string.Join("; ", dataset.Points.Select(p =>
                 $"{p.X.ToString(CultureInfo.InvariantCulture)},{p.Y.ToString(CultureInfo.InvariantCulture)}")));
         }
 
         // --- Метод и его параметры ---
         lines.Add("");
-        lines.Add($"Method: {selectedMethod}");
+        lines.Add($"Metoda: {selectedMethod}");
         if (!string.IsNullOrEmpty(methodParameter))
             lines.Add($"Parameter: {methodParameter}");
 
@@ -127,7 +127,7 @@ public static class FileManager
         if (!string.IsNullOrEmpty(methodProcessedData))
         {
             lines.Add("");
-            lines.Add("Processed Data:");
+            lines.Add("Zpracovaná data:");
             lines.Add(methodProcessedData);
         }
 
@@ -139,10 +139,10 @@ public static class FileManager
         if (regression != null)
         {
             lines.Add("");
-            lines.Add("Regression Fit:");
-            lines.Add($"Slope:    {regression.Slope:F4}");
+            lines.Add("Regresní fit:");
+            lines.Add($"Svala:    {regression.Slope:F4}");
             lines.Add($"Intercept:{regression.Intercept:F4}");
-            lines.Add($"MedSqRes: {regression.MedianSquaredResidual:F4}");
+            lines.Add($"Medián čtvercových reziduí: {regression.MedianSquaredResidual:F4}");
         }
 
         try
