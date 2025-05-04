@@ -3,15 +3,10 @@ using System.Collections.ObjectModel;
 
 using System.ComponentModel;
 
-/// <summary>
-/// Represents either a univariate dataset (Values) или bivariate (Points).
-/// </summary>
 public class Dataset : INotifyPropertyChanged
 {
-    // Для простых методов
     public ObservableCollection<double> Values { get; private set; } = new();
 
-    // Для методов регрессии
     public ObservableCollection<(double X, double Y)> Points { get; private set; } = new();
 
     public void SetValues(IEnumerable<double> vals)

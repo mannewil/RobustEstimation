@@ -56,7 +56,7 @@ namespace RobustEstimation.ViewModels.Methods
         public LMSMethodViewModel(Dataset dataset, MainWindowViewModel mainVM)
         {
             _dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
-            this._mainVM = _mainVM ?? throw new ArgumentNullException(nameof(_mainVM));
+            _mainVM = mainVM ?? throw new ArgumentNullException(nameof(mainVM));
 
             // single command, enable/disable via CanCompute
             ComputeCommand = new AsyncRelayCommand(ComputeLMSAsync);
